@@ -1,0 +1,91 @@
+name: Release
+
+# Creates a GitHub release when a `v*` tag is pushed. Tagging is the whole
+# release. Nothing is published to PyPI: operators deploy the container image
+# they build from a pinned commit (see AGENTS.md).
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  # The same gate main gets, called rather than copied.
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    name: build and check the artifacts
+    needs: ci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+          python-version: "3.12"
+
+      # A tag is typed by hand and the version lives in a file, so the two can
+      # disagree. A release must say what it contains.
+      - name: The tag must match the version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          version=$(uv run --no-project python -c \
+            'import tomllib,pathlib; print(tomllib.loads(pathlib.Path("pyproject.toml").read_text())["project"]["version"])')
+          if [ "$tag" != "$version" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match pyproject version $version"
+            exit 1
+          fi
+
+      - name: Build
+        run: uv build
+
+      - name: The artifacts are well-formed
+        run: uvx twine check dist/*
+
+      # Every test imports from the working tree; installing the wheel in a
+      # clean environment catches a missing module or a broken entry point.
+      - name: The wheel installs and registers the five tools
+        run: |
+          uv venv /tmp/wheel-check
+          uv pip install --python /tmp/wheel-check dist/*.whl
+          /tmp/wheel-check/bin/python -c '
+          import anyio
+          from email_assistance_agent.server import ALLOWED_TOOLS, server
+          names = {t.name for t in anyio.run(server.list_tools)}
+          assert names == ALLOWED_TOOLS, names
+          print(sorted(names))
+          '
+          test -x /tmp/wheel-check/bin/email-assistance-agent
+          test -x /tmp/wheel-check/bin/email-assistance-agent-egress-check
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dist
+          path: dist/
+
+  release:
+    name: GitHub release
+    needs: build
+    runs-on: ubuntu-latest
+    # The only job that can write to the repository.
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dist
+          path: dist/
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes \
+            --verify-tag

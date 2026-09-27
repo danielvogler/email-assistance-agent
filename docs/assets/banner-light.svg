@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300" role="img" aria-label="email assistance agent — gives your coding agent your mailbox: it searches, catches up on threads and prepares replies, and you review and send.">
+  <title>email assistance agent</title>
+  <!-- The mark is an envelope with a pencil across it: the agent reads the
+       mailbox and writes replies; a person sends them. -->
+  <rect width="1200" height="300" fill="#FBFAF7"/>
+
+  <g transform="translate(76 80)">
+    <rect width="140" height="140" rx="18" fill="#14161A"/>
+    <rect x="24" y="40" width="80" height="56" rx="6" fill="none" stroke="#FBFAF7" stroke-width="5"/>
+    <path d="M27 44 L64 72 L101 44" fill="none" stroke="#FBFAF7" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" opacity="0.75"/>
+    <g transform="rotate(-40 92 92)">
+      <rect x="62" y="85" width="50" height="14" rx="2" fill="#D92D20"/>
+      <path d="M112 85 L126 92 L112 99 Z" fill="#FBFAF7"/>
+      <rect x="54" y="85" width="8" height="14" rx="2" fill="#FBFAF7" opacity="0.45"/>
+    </g>
+  </g>
+
+  <g font-family="Inter, Archivo, ui-sans-serif, -apple-system, Segoe UI, Helvetica, Arial, sans-serif">
+    <circle cx="263" cy="62" r="4" fill="#D92D20"/>
+    <text x="276" y="67" font-size="13" font-weight="600" letter-spacing="2.4" fill="#57534E">EMAIL FOR CODING AGENTS</text>
+
+    <!-- The wordmark: two weights, as in the sibling projects. -->
+    <text x="256" y="140" font-size="68" letter-spacing="-2.6">
+      <tspan font-weight="700" fill="#14161A">email</tspan><tspan font-weight="400" fill="#A8A29A"> assistance </tspan><tspan font-weight="700" fill="#14161A">agent</tspan>
+    </text>
+    <circle cx="962" cy="131" r="8" fill="#D92D20"/>
+
+    <text x="257" y="196" font-size="23" fill="#57534E">Your coding agent searches the mailbox, catches up on</text>
+    <text x="257" y="227" font-size="23" fill="#57534E">threads and prepares replies. You review and send.</text>
+
+    <text x="257" y="266" font-size="14" letter-spacing="0.3" fill="#A8A29A">Open source · Gmail over IMAP · MCP server on Cloud Run · a person sends every email</text>
+  </g>
+</svg>

@@ -1,0 +1,72 @@
+[build-system]
+requires = ["uv_build>=0.9.28,<0.13"]
+build-backend = "uv_build"
+
+[project]
+name = "email-assistance-agent"
+version = "0.1.0"
+description = "Draft-only Gmail MCP server for coding agents: it searches, reads and drafts replies, and is deployed so it can never send."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "Daniel Vogler" }]
+keywords = ["coding-agent", "draft", "email", "gmail", "imap", "mcp", "mcp-server"]
+dependencies = [
+  "imapclient>=4.1,<5",
+  "mcp>=2.2,<3",
+  "pydantic-settings>=2.15,<3",
+]
+
+[project.scripts]
+email-assistance-agent = "email_assistance_agent.server:main"
+email-assistance-agent-egress-check = "email_assistance_agent.egress_check:main"
+
+[project.urls]
+Homepage = "https://github.com/danielvogler/email-assistance-agent"
+Source = "https://github.com/danielvogler/email-assistance-agent"
+Issues = "https://github.com/danielvogler/email-assistance-agent/issues"
+
+[dependency-groups]
+dev = [
+  "httpx>=0.28",
+  "mypy>=2.3",
+  "pre-commit>=4.6",
+  "pytest>=9.1",
+  "pytest-cov>=7.1",
+  "pyyaml>=6",
+  "ruff>=0.16.9",
+  "types-pyyaml>=6",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 110
+
+[tool.ruff.lint]
+select = ["E", "F", "D", "I", "B", "UP", "S"]
+ignore = ["D107", "D203", "D212", "E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests assert, use fake credentials, and document themselves by name.
+"tests/**" = ["S101", "S105", "S106", "D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.mypy]
+strict = true
+files = ["src", "tests"]
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+# imapclient ships no type information.
+module = ["imapclient", "imapclient.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--strict-markers --cov=email_assistance_agent --cov-report=term-missing"
+
+[tool.coverage.report]
+fail_under = 80

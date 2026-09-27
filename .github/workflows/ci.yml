@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # The release workflow runs exactly this gate rather than a copy that drifts.
+  workflow_call:
+  # Re-run after an infrastructure blip without pushing an empty commit.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Every action is pinned to a commit, not a tag: a tag can be moved onto other
+# code, and an action runs with this workflow's token. The comment names the
+# release, for the human reading it. Dependabot keeps them current.
+jobs:
+  test:
+    name: test (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install the project
+        run: uv sync --frozen
+
+      - name: Format
+        run: uv run ruff format --check .
+
+      - name: Lint
+        run: uv run ruff check --output-format=github .
+
+      - name: Type check
+        run: uv run mypy
+
+      # No mailbox credentials exist in CI, and none should: the suite fakes
+      # the IMAP layer, so a test that needs a live mailbox has stopped
+      # testing this repository.
+      - name: Test
+        run: uv run pytest
+
+  infra:
+    name: infra (tofu)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install OpenTofu
+        uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
+        with:
+          tofu_version: 1.12.6
+          tofu_wrapper: false
+
+      - name: Format
+        run: tofu fmt -check -recursive infra
+
+      - name: Validate
+        run: |
+          tofu -chdir=infra init -backend=false -input=false
+          tofu -chdir=infra validate
+
+      # Plans against a mocked provider: no cloud credentials involved.
+      - name: Test
+        run: tofu -chdir=infra test
+
+  docker:
+    name: container smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The image is the product that gets deployed: build it and prove it
+      # serves exactly the five draft-only tools.
+      - name: Build and list tools
+        run: scripts/docker-smoke.sh
+
+  secrets:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history: a secret committed once and reverted is still leaked.
+          fetch-depth: 0
+
+      - name: Scan history for secrets
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

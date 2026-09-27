@@ -1,0 +1,18 @@
+# Only pyproject.toml, uv.lock, README.md, LICENSE, NOTICE and src/ are needed.
+.env
+.env.*
+.venv
+.git
+.github
+.adk
+.mypy_cache
+.pytest_cache
+.ruff_cache
+**/__pycache__
+tests
+infra
+docs
+templates
+scripts
+notes
+*.code-workspace

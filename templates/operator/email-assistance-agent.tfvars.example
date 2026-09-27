@@ -1,0 +1,41 @@
+# Copy to your private operator repository as email-assistance-agent.tfvars and fill in.
+# Never commit the filled-in file to the public email-assistance-agent repo.
+
+# A project dedicated to this service (see AGENTS.md step 2.3).
+project_id = "REPLACE-with-your-project-id"
+
+# Chosen for data residency. Cloud Run, the subnet, NAT, the registry and the
+# secret replicas all live here.
+region = "europe-west6"
+
+# null on the first apply. After `make image`, paste the printed digest-pinned
+# reference here, e.g. "europe-west6-docker.pkg.dev/<project>/email-agent/email-assistance-agent@sha256:...".
+image = null
+
+mailboxes = {
+  # The key (here "owner") becomes part of resource names: 1-15 lowercase
+  # letters, digits or hyphens.
+  owner = {
+    address = "REPLACE@example.com"
+
+    # May add a new app password version to this mailbox's secret, but never
+    # read one. Usually the mailbox owner's everyday identity.
+    owner_member = "user:REPLACE@example.com"
+
+    # Who may call this mailbox's service through the proxy.
+    invoker_members = ["user:REPLACE@example.com"]
+
+    # The version number printed by `gcloud secrets versions add`. Unset until
+    # the password is added. Never "latest": rotation is a reviewed apply.
+    # secret_version = "1"
+
+    # Appended below every draft. \n for new lines.
+    # signature = "Your Name\nYour Company"
+
+    # What the service may read. Empty list = every label.
+    read_labels = ["INBOX"]
+
+    # How far back it may read, by the date Gmail received the message.
+    # read_max_age_days = 90
+  }
+}

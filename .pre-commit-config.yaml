@@ -1,0 +1,114 @@
+---
+# Install with: uv run pre-commit install --install-hooks
+# Run over everything with: uv run pre-commit run --all-files
+# Type checking and tests run on push, not on every commit.
+default_install_hook_types: [pre-commit, commit-msg, pre-push]
+default_language_version:
+  python: python3.12
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args: [--maxkb=512]
+        # uv.lock is generated, committed on purpose, and legitimately large.
+        exclude: ^uv\.lock$
+      - id: check-merge-conflict
+      - id: check-json
+      - id: check-toml
+      - id: check-yaml
+      - id: detect-private-key
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: trailing-whitespace
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.9
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.12.19
+    hooks:
+      # Keeps uv.lock honest whenever pyproject.toml moves.
+      - id: uv-lock
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+
+  - repo: local
+    hooks:
+      # The whole point of this service is that it cannot send. This is the
+      # cheapest of the layers that enforce it: code that could send never
+      # gets committed. tests/guard proves the pattern still matches.
+      - id: no-send-code
+        name: no code that can send mail
+        language: pygrep
+        files: ^src/
+        types: [python]
+        # `.send(` covers every Gmail API form (drafts().send, messages().send)
+        # as well as sockets; nothing in src/ has a legitimate use for it.
+        entry: 'smtplib|SMTP(_SSL)?\(|\.sendmail\(|send_message\(|\.send\(|/send\b'
+
+      # A service account key is the most common way a GCP project leaks.
+      # This service authenticates with attached identities only.
+      - id: no-gcp-service-account-keys
+        name: no GCP service account keys
+        language: pygrep
+        entry: '"type"\s*:\s*"service_account"'
+        types: [json]
+
+      # .env holds a live app password. .gitignore is walked straight past by
+      # `git add -f`, so refuse it explicitly.
+      - id: no-dotenv-committed
+        name: no .env committed
+        language: fail
+        files: '^\.env$|(^|/)\.env\.(local|[^.]*)$'
+        exclude: '(^|/)\.env\.example$'
+        entry: .env holds a live app password and must never be committed. Put placeholders in .env.example.
+
+      # Real deployment values belong in the operator's private repository.
+      - id: no-real-tfvars
+        name: no real tfvars or backend config committed
+        language: fail
+        files: '(\.tfvars|backend\.hcl|\.tfstate)$'
+        exclude: '^infra/example\.tfvars$'
+        entry: Deployment values and state stay in the operator's private repository, never here.
+
+      - id: tofu-fmt
+        name: tofu fmt
+        language: system
+        entry: tofu fmt -check -diff
+        files: \.(tf|tfvars|tftest\.hcl)$
+        pass_filenames: true
+
+      # The upstream mypy mirror cannot see project dependencies.
+      - id: mypy
+        name: mypy
+        entry: uv run --frozen mypy
+        language: system
+        types: [python]
+        pass_filenames: false
+        require_serial: true
+        stages: [pre-push]
+
+      - id: pytest
+        name: pytest
+        entry: uv run --frozen pytest -q
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+
+      - id: no-agent-coauthors
+        name: no AI attribution in commit messages
+        language: pygrep
+        stages: [commit-msg]
+        args: [--ignore-case, --multiline]
+        entry: '(co-authored-by|generated with).*(claude|anthropic|copilot|cursor|gemini|codex|chatgpt|openai)'

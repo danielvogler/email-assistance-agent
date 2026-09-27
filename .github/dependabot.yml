@@ -1,0 +1,68 @@
+# Monthly and grouped: about one pull request per ecosystem per month.
+# Security updates are separate and still arrive as soon as an advisory is
+# published. Actions, base images and hook revisions are pinned by SHA or
+# digest, which is right for supply-chain reasons and also means nobody would
+# notice a security fix without something bringing it to a pull request.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: pre-commit
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: chore
+    groups:
+      hooks:
+        patterns: ["*"]
+
+  # GitHub already holds a release back 3 days; a week keeps a version that is
+  # yanked or hot-fixed over its first weekend out of a pull request entirely.
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: chore
+    groups:
+      dev-dependencies:
+        dependency-type: development
+        patterns: ["*"]
+      runtime-dependencies:
+        dependency-type: production
+        # Majors arrive one by one: mcp and imapclient are capped below the
+        # next major, and a bump needs a read, not a merge.
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  # The base images in the Dockerfile are pinned by digest.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: chore
+    groups:
+      images:
+        patterns: ["*"]
+
+  - package-ecosystem: terraform
+    directory: /infra
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: chore
+    groups:
+      providers:
+        patterns: ["*"]

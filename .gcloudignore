@@ -1,0 +1,21 @@
+# What `gcloud builds submit` must not upload. Only the files the Dockerfile
+# copies are needed; above all, never .env.
+.gcloudignore
+.git
+.github
+.env
+.env.*
+.venv
+.adk
+.mypy_cache
+.pytest_cache
+.ruff_cache
+**/__pycache__
+infra
+tests
+docs
+templates
+notes
+*.tfvars
+backend.hcl
+*.code-workspace

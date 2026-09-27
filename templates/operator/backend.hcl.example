@@ -1,0 +1,5 @@
+# Copy to your private operator repository as backend.hcl.
+# The bucket must already exist: versioned, uniform bucket-level access,
+# public access prevention enforced, in your chosen region.
+bucket = "REPLACE-with-your-state-bucket"
+prefix = "email-assistance-agent"

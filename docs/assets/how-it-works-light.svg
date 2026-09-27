@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="500" viewBox="0 0 1200 500" role="img" aria-label="Where each part runs, and where sending stops. On your machine, your coding agent talks MCP to localhost, where a gcloud proxy signs each request with your Google identity. In your private Google Cloud project, the email assistance agent service on Cloud Run accepts only invokers you allow; it reads the app password from Secret Manager, which nobody else can read, and offers five tools: search, read_message, read_thread, list_drafts and create_draft. All its traffic leaves through a VPC firewall. IMAP on port 993 passes, so it can read your mailbox within the labels and age you allow and append a reply draft to the Drafts folder. SMTP on ports 465 and 587 is denied at the firewall, so it cannot send. In Google Workspace, you review the draft, edit it and send it yourself. Recipients come from the original email, bodies are marked untrusted, nothing is deleted or marked read, and a person sends.">
+  <title>How email assistance agent is deployed</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M1 1 L9 5 L1 9" fill="none" stroke="#57534E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <rect width="1200" height="500" fill="#FBFAF7"/>
+
+  <g font-family="Inter, Archivo, ui-sans-serif, -apple-system, Segoe UI, Helvetica, Arial, sans-serif">
+    <!-- zones -->
+    <rect x="30" y="40" width="250" height="380" rx="14" fill="#F3F1EC" stroke="#E7E3DC" stroke-width="1.5"/>
+    <text x="50" y="68" font-size="11.5" font-weight="600" letter-spacing="1.8" fill="#A8A29A">YOUR MACHINE</text>
+
+    <rect x="310" y="40" width="560" height="380" rx="14" fill="#F3F1EC" stroke="#E7E3DC" stroke-width="1.5"/>
+    <text x="330" y="68" font-size="11.5" font-weight="600" letter-spacing="1.8" fill="#A8A29A">YOUR PRIVATE GOOGLE CLOUD PROJECT</text>
+
+    <rect x="900" y="40" width="270" height="380" rx="14" fill="#F3F1EC" stroke="#E7E3DC" stroke-width="1.5"/>
+    <text x="920" y="68" font-size="11.5" font-weight="600" letter-spacing="1.8" fill="#A8A29A">GOOGLE WORKSPACE</text>
+
+    <!-- your machine -->
+    <rect x="50" y="92" width="210" height="72" rx="10" fill="#FFFFFF" stroke="#D6D1C8" stroke-width="1.5"/>
+    <text x="68" y="122" font-size="16" font-weight="600" fill="#14161A">Coding agent</text>
+    <text x="68" y="145" font-size="12.5" fill="#57534E">Claude Code, or any MCP client</text>
+
+    <path d="M155 164 V238" stroke="#57534E" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <text x="165" y="206" font-size="12" fill="#57534E">localhost:8080/mcp</text>
+
+    <rect x="50" y="242" width="210" height="72" rx="10" fill="#FFFFFF" stroke="#D6D1C8" stroke-width="1.5"/>
+    <text x="68" y="272" font-size="16" font-weight="600" fill="#14161A">gcloud proxy</text>
+    <text x="68" y="295" font-size="13" fill="#57534E">signs requests as you</text>
+
+    <!-- into the project -->
+    <path d="M260 278 H354" stroke="#57534E" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <text x="268" y="268" font-size="12" fill="#57534E">HTTPS + IAM</text>
+
+    <!-- secret manager -->
+    <rect x="358" y="92" width="286" height="72" rx="10" fill="#FFFFFF" stroke="#D6D1C8" stroke-width="1.5"/>
+    <text x="376" y="122" font-size="16" font-weight="600" fill="#14161A">Secret Manager</text>
+    <text x="376" y="145" font-size="13" fill="#57534E">app password, only the service reads it</text>
+    <path d="M490 164 V206" stroke="#A8A29A" stroke-width="1.5" stroke-dasharray="4 5" stroke-linecap="round"/>
+
+    <!-- the service -->
+    <rect x="358" y="206" width="316" height="190" rx="12" fill="#FFFFFF" stroke="#14161A" stroke-width="1.5"/>
+    <text x="378" y="238" font-size="17" font-weight="600" fill="#14161A">email assistance agent</text>
+    <text x="378" y="260" font-size="13" fill="#57534E">on Cloud Run, private, invokers you allow</text>
+    <g font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#14161A">
+      <rect x="378" y="278" width="72" height="26" rx="6" fill="#F3F1EC"/><text x="414" y="295.5" text-anchor="middle">search</text>
+      <rect x="458" y="278" width="110" height="26" rx="6" fill="#F3F1EC"/><text x="513" y="295.5" text-anchor="middle">read_message</text>
+      <rect x="378" y="312" width="104" height="26" rx="6" fill="#F3F1EC"/><text x="430" y="329.5" text-anchor="middle">read_thread</text>
+      <rect x="490" y="312" width="100" height="26" rx="6" fill="#F3F1EC"/><text x="540" y="329.5" text-anchor="middle">list_drafts</text>
+      <rect x="378" y="346" width="112" height="26" rx="6" fill="#FFFFFF" stroke="#D92D20" stroke-width="1.2"/><text x="434" y="363.5" text-anchor="middle">create_draft</text>
+    </g>
+    <text x="500" y="363" font-size="12" fill="#A8A29A">no send, delete or move</text>
+
+    <!-- the firewall -->
+    <path d="M800 78 V404" stroke="#14161A" stroke-width="2" stroke-dasharray="2 5" stroke-linecap="round"/>
+    <text x="808" y="92" font-size="11.5" font-weight="600" letter-spacing="1.8" fill="#14161A">VPC</text>
+    <text x="808" y="107" font-size="11.5" font-weight="600" letter-spacing="1.8" fill="#14161A">FIREWALL</text>
+
+    <!-- read: IMAP -->
+    <path d="M674 236 H760 Q770 236 770 226 V148 Q770 138 780 138 H916" fill="none" stroke="#57534E" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <text x="690" y="228" font-size="12" fill="#57534E">IMAP 993</text>
+
+    <!-- write: append draft -->
+    <path d="M674 292 H916" fill="none" stroke="#57534E" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <text x="690" y="284" font-size="12" fill="#57534E">append draft</text>
+
+    <!-- send: blocked -->
+    <path d="M674 360 H788" fill="none" stroke="#D92D20" stroke-width="1.5" stroke-dasharray="5 4"/>
+    <circle cx="800" cy="360" r="12" fill="#FBFAF7" stroke="#D92D20" stroke-width="2"/>
+    <path d="M794.5 354.5 L805.5 365.5 M805.5 354.5 L794.5 365.5" stroke="#D92D20" stroke-width="2.2" stroke-linecap="round"/>
+    <text x="690" y="352" font-size="12" font-weight="600" fill="#D92D20">SMTP 465 / 587</text>
+    <text x="820" y="382" font-size="12" font-weight="600" fill="#D92D20">denied</text>
+
+    <!-- workspace -->
+    <rect x="920" y="102" width="230" height="72" rx="10" fill="#FFFFFF" stroke="#D6D1C8" stroke-width="1.5"/>
+    <text x="938" y="132" font-size="16" font-weight="600" fill="#14161A">Mailbox</text>
+    <text x="938" y="155" font-size="13" fill="#57534E">read-only, your labels and age</text>
+
+    <rect x="920" y="256" width="230" height="72" rx="10" fill="#FFFFFF" stroke="#D6D1C8" stroke-width="1.5"/>
+    <text x="938" y="286" font-size="16" font-weight="600" fill="#14161A">Drafts</text>
+    <text x="938" y="309" font-size="13" fill="#57534E">a reply in the original thread</text>
+
+    <path d="M1035 328 V350" stroke="#57534E" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <rect x="920" y="352" width="230" height="48" rx="10" fill="#FFFFFF" stroke="#D92D20" stroke-width="1.5"/>
+    <text x="938" y="382" font-size="15" font-weight="600" fill="#14161A">You <tspan font-weight="400" fill="#57534E">review, edit and send</tspan></text>
+
+    <path d="M60 446 H1140" stroke="#E7E3DC" stroke-width="1.5"/>
+    <text x="600" y="476" font-size="13.5" text-anchor="middle" fill="#A8A29A">Recipients come from the original email · bodies are marked untrusted · nothing is deleted or marked read · <tspan fill="#D92D20" font-weight="600">a person sends</tspan></text>
+  </g>
+</svg>
