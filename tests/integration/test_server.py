@@ -69,10 +69,12 @@ def test_tool_set_is_exactly_the_allowlist() -> None:
     assert {tool.name for tool in list_tools()} == server.ALLOWED_TOOLS
 
 
-def test_no_tool_name_suggests_sending_or_deleting() -> None:
+def test_no_tool_name_suggests_sending_or_touching_other_mail() -> None:
     names = {tool.name for tool in list_tools()}
 
-    assert not [n for n in names for word in FORBIDDEN_WORDS if word in n]
+    # delete_draft is the one deleting tool, and it only reaches the service's own drafts.
+    assert not [n for n in names - {"delete_draft"} for word in FORBIDDEN_WORDS if word in n]
+    assert not [n for n in names if "send" in n or "move" in n or "trash" in n]
 
 
 def test_every_description_marks_email_as_untrusted() -> None:
@@ -80,14 +82,13 @@ def test_every_description_marks_email_as_untrusted() -> None:
         assert server.UNTRUSTED_NOTICE in (tool.description or ""), tool.name
 
 
-def test_only_create_draft_writes_and_nothing_is_destructive() -> None:
+def test_writes_and_destructive_tools_are_exactly_the_draft_tools() -> None:
     annotations = {tool.name: tool.annotations for tool in list_tools()}
 
-    assert sorted(n for n, a in annotations.items() if not a.read_only_hint) == [
-        "compose_draft",
-        "create_draft",
-    ]
-    assert all(a.destructive_hint is False for a in annotations.values())
+    writers = sorted(n for n, a in annotations.items() if not a.read_only_hint)
+    destructive = sorted(n for n, a in annotations.items() if a.destructive_hint)
+    assert writers == ["compose_draft", "create_draft", "delete_draft", "update_draft"]
+    assert destructive == ["delete_draft", "update_draft"]
 
 
 def test_tools_list_without_any_configuration() -> None:
@@ -233,3 +234,62 @@ def test_compose_draft_rejects_addresses_with_names_or_separators(mailbox: FakeI
         with pytest.raises(ToolError):
             anyio.run(call_tool, "compose_draft", {"to": to, "subject": "hi", "body": "x"})
     assert mailbox.appended == []
+
+
+def agent_reply_draft(uid: int) -> FakeMail:
+    raw = (
+        b"From: me@example.com\nTo: Alice <alice@example.org>\nSubject: Re: Project update\n"
+        b"Message-ID: <d1@example.com>\nIn-Reply-To: <orig-1@example.org>\n"
+        b"X-Drafted-By: email-assistance-agent\n\nfirst version\n"
+    )
+    return FakeMail(uid, raw, folder=DRAFTS_FOLDER)
+
+
+def test_update_draft_replaces_a_reply_in_place(mailbox: FakeImap) -> None:
+    mailbox.messages.append(agent_reply_draft(9))
+
+    data = call("update_draft", {"draft_uid": 9, "body": "second version"})["data"]
+
+    assert data == {
+        "draft_uid": 42,
+        "to": "Alice <alice@example.org>",
+        "cc": "",
+        "subject": "Re: Project update",
+    }
+    assert mailbox.deleted == [(DRAFTS_FOLDER, 9)]
+    new = message_from_bytes(mailbox.appended[0][1])
+    assert new["In-Reply-To"] == "<orig-1@example.org>"
+    payload = new.get_payload(decode=True)
+    assert isinstance(payload, bytes)
+    assert payload.decode().startswith("second version\n\n-- \nMe\nExample Ltd\n\nOn ")
+
+
+def test_update_draft_rejects_a_new_subject_for_a_reply(mailbox: FakeImap) -> None:
+    mailbox.messages.append(agent_reply_draft(9))
+
+    result = call("update_draft", {"draft_uid": 9, "body": "x", "subject": "other"})
+
+    assert result["status"] == "error" and "keeps the subject" in result["error"]
+    assert mailbox.appended == [] and mailbox.deleted == []
+
+
+def test_update_draft_of_a_new_email_can_change_subject(mailbox: FakeImap) -> None:
+    call("compose_draft", {"to": ["aspast@example.org"], "subject": "hi", "body": "v1"})
+    raw = mailbox.appended[0][1]
+    mailbox.messages.append(FakeMail(10, raw, folder=DRAFTS_FOLDER))
+
+    data = call("update_draft", {"draft_uid": 10, "body": "v2", "subject": "hello"})["data"]
+
+    assert (data["to"], data["subject"]) == ("aspast@example.org", "hello")
+    assert mailbox.deleted == [(DRAFTS_FOLDER, 10)]
+
+
+def test_delete_draft_removes_only_agent_drafts(mailbox: FakeImap) -> None:
+    assert call("delete_draft", {"draft_uid": 3})["data"] == {"deleted_draft_uid": 3}
+    assert mailbox.deleted == [(DRAFTS_FOLDER, 3)]
+
+    mailbox.messages.append(FakeMail(11, make_raw(subject="owner draft"), folder=DRAFTS_FOLDER))
+    result = call("delete_draft", {"draft_uid": 11})
+
+    assert result["error"] == "Draft 11 was not found."
+    assert mailbox.deleted == [(DRAFTS_FOLDER, 3)]

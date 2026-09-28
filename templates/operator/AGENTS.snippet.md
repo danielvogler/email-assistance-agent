@@ -5,8 +5,10 @@
 
 - **Reads:** the mailbox REPLACE-address, limited to labels REPLACE and messages
   newer than REPLACE days.
-- **Writes:** reply drafts only, into the original thread. It cannot send,
-  delete or move mail. A person reviews and sends every draft in Gmail.
+- **Writes:** drafts only: replies in their thread and new emails. It can revise
+  or delete the drafts it created, nothing else. It cannot send or move mail. A
+  person reviews and sends every draft in Gmail.
+- When asked to change a draft, update it rather than creating another.
 - **Credential:** an app password of that mailbox, held in Secret Manager by the
   service account `email-agent-<key>`. Nobody else can read it.
 - **Start it:** from a checkout of email-assistance-agent at the pinned commit,

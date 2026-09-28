@@ -48,7 +48,7 @@ jobs:
 
       # Every test imports from the working tree; installing the wheel in a
       # clean environment catches a missing module or a broken entry point.
-      - name: The wheel installs and registers the six tools
+      - name: The wheel installs and registers the eight tools
         run: |
           uv venv /tmp/wheel-check
           uv pip install --python /tmp/wheel-check dist/*.whl

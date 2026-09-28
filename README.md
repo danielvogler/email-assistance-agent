@@ -47,10 +47,10 @@ changing, and press send.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/how-it-works-dark.svg">
-  <img alt="Where each part runs, and where sending stops. On your machine, your coding agent talks MCP to localhost, where a gcloud proxy signs each request with your Google identity. In your private Google Cloud project, the email assistance agent service on Cloud Run accepts only invokers you allow; it reads the app password from Secret Manager, which nobody else can read, and offers six tools: search, read_message, read_thread, list_drafts, create_draft and compose_draft. All its traffic leaves through a VPC firewall. IMAP on port 993 passes, so it can read your mailbox within the labels and age you allow and append drafts, replies in their thread or new emails, to the Drafts folder. SMTP on ports 465 and 587 is denied at the firewall, so it cannot send. In Google Workspace, you review the draft, edit it and send it yourself. Replies go back to the original senders, bodies are marked untrusted, nothing is deleted or marked read, and a person sends." src="docs/assets/how-it-works-light.svg">
+  <img alt="Where each part runs, and where sending stops. On your machine, your coding agent talks MCP to localhost, where a gcloud proxy signs each request with your Google identity. In your private Google Cloud project, the email assistance agent service on Cloud Run accepts only invokers you allow; it reads the app password from Secret Manager, which nobody else can read, and offers eight tools: search, read_message, read_thread, list_drafts, create_draft, compose_draft, update_draft and delete_draft. All its traffic leaves through a VPC firewall. IMAP on port 993 passes, so it can read your mailbox within the labels and age you allow and append drafts, replies in their thread or new emails, to the Drafts folder. SMTP on ports 465 and 587 is denied at the firewall, so it cannot send. In Google Workspace, you review the draft, edit it and send it yourself. Replies go back to the original senders, bodies are marked untrusted, only its own drafts can be changed or deleted, and a person sends." src="docs/assets/how-it-works-light.svg">
 </picture>
 
-It is an [MCP](https://modelcontextprotocol.io) server with six tools:
+It is an [MCP](https://modelcontextprotocol.io) server with eight tools:
 
 | Tool | What it does |
 |---|---|
@@ -60,6 +60,8 @@ It is an [MCP](https://modelcontextprotocol.io) server with six tools:
 | `list_drafts` | Replies it has prepared |
 | `create_draft` | A reply in the original conversation, waiting for you in Gmail |
 | `compose_draft` | A new email to the addresses you name, waiting for you in Gmail |
+| `update_draft` | Changes a draft it created, keeping recipients and thread, so revisions don't pile up |
+| `delete_draft` | Deletes a draft it created; nothing else can be deleted |
 
 ## You stay in control
 

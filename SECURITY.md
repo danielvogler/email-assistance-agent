@@ -20,7 +20,7 @@ whatever the code, the model or the agent driving it does:
 |---|---|---|
 | Credential | A Gmail app password: IMAP and SMTP only, no Gmail REST API | Google's documentation |
 | Network | All Cloud Run egress goes through a VPC whose firewall denies tcp 465 and 587; Google Cloud blocks 25 | the `egress-check` job (`make verify`); OpenTofu tests |
-| Code | No SMTP or send call in `src/`; exactly six tools, none of which sends, deletes or moves | a pre-commit hook; the tool allowlist test |
+| Code | No SMTP or send call in `src/`; exactly eight tools; none sends or moves mail, and the only deletion is of drafts the service created itself | a pre-commit hook; the tool allowlist test |
 
 Why an app password and not OAuth: every Gmail scope that can create drafts
 can also send (`gmail.compose`, `gmail.modify`), and IMAP over OAuth needs the
@@ -54,6 +54,11 @@ The consumer is a coding agent with powerful tools of its own. An email saying
 
 - every tool description says email content is untrusted third-party data,
   and every body is returned under `content_untrusted`
+- the service can revise and delete only its own drafts, recognised by its
+  marker header; your drafts and all other mail behave as not found. A deleted
+  draft is gone for good (Gmail does not move it to Trash). Deletion removes one
+  uid with UID EXPUNGE and is refused on a server without UIDPLUS, so no other
+  message flagged for deletion can be caught up in it
 - recipients, subject and threading of a reply come from the original email's
   headers, never from the model, so an email cannot redirect a reply
 - a new email (`compose_draft`) goes to plain addresses the agent passes: no
