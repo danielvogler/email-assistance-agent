@@ -201,6 +201,10 @@ run "builds_have_a_narrow_identity" {
     error_message = "The build identity may push images, nothing broader."
   }
   assert {
+    condition     = google_storage_bucket_iam_member.build_uses_bucket.role == "roles/storage.admin" && google_storage_bucket_iam_member.build_uses_bucket.bucket == google_storage_bucket.build.name
+    error_message = "The build account gets Storage Admin on its own bucket, which Cloud Build requires for a user-created logs bucket."
+  }
+  assert {
     condition     = google_storage_bucket.build.public_access_prevention == "enforced" && google_storage_bucket.build.location == "europe-west6"
     error_message = "The staging bucket is private and stays in the region."
   }

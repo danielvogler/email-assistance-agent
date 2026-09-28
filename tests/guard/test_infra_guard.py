@@ -28,3 +28,15 @@ def test_no_public_iam_member_anywhere() -> None:
     ]
 
     assert offenders == []
+
+
+def test_build_account_has_no_project_level_role() -> None:
+    project_grants = [
+        match.group(0)
+        for path in INFRA.rglob("*.tf")
+        for match in re.finditer(
+            r'resource\s+"google_project_iam_member"[^}]*google_service_account\.build\.', path.read_text()
+        )
+    ]
+
+    assert project_grants == []
