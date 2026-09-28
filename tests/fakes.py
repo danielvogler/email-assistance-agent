@@ -1,7 +1,7 @@
 """An in-memory stand-in for IMAPClient, recording every call it receives.
 
-It deliberately has no methods that change flags or delete anything, so a
-code path that tries to would fail with AttributeError.
+Deleting is recorded, and only allowed on a folder selected for writing, so a
+test can assert exactly which uid in which folder was removed.
 """
 
 from __future__ import annotations
@@ -78,6 +78,10 @@ class FakeImap:
     appended: list[tuple[str, bytes, tuple[bytes, ...], datetime | None]] = field(default_factory=list)
     fetched_items: list[list[str]] = field(default_factory=list)
     logged_out: bool = False
+    readonly: bool = True
+    deleted: list[tuple[str, int]] = field(default_factory=list)
+    uidplus: bool = True
+    flagged_deleted: list[int] = field(default_factory=list)
     normalise_times: bool = True
 
     def login(self, username: str, password: str) -> None:
@@ -91,6 +95,7 @@ class FakeImap:
 
     def select_folder(self, folder: str, readonly: bool = False) -> dict[bytes, Any]:
         self.selected = folder
+        self.readonly = readonly
         self.selections.append((folder, readonly))
         return {}
 
@@ -139,3 +144,17 @@ class FakeImap:
     ) -> bytes:
         self.appended.append((folder, msg, tuple(flags), msg_time))
         return self.append_response
+
+    def capabilities(self) -> tuple[bytes, ...]:
+        return (b"IMAP4REV1", b"X-GM-EXT-1") + ((b"UIDPLUS",) if self.uidplus else ())
+
+    def delete_messages(self, uids: Sequence[int]) -> None:
+        assert not self.readonly, "deleting in a folder selected read-only"
+        self.flagged_deleted = list(uids)
+
+    def uid_expunge(self, uids: Sequence[int]) -> None:
+        assert list(uids) == self.flagged_deleted, "expunging something other than what was flagged"
+        assert self.selected is not None
+        for uid in uids:
+            self.deleted.append((self.selected, uid))
+        self.messages = [m for m in self.messages if not (m.folder == self.selected and m.uid in uids)]

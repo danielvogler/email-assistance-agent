@@ -1,4 +1,4 @@
-"""Create and list agent drafts. Nothing here sends, deletes or expunges."""
+"""Create and list agent drafts. Nothing here sends; changes live in draft_edit."""
 
 from __future__ import annotations
 

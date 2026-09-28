@@ -35,7 +35,8 @@ enforces that:
 
 Invariants that every change must keep:
 
-- never send, never delete, never expunge, never set `\Seen` (reads use
+- never send; delete or replace only the service's own drafts (marker header,
+  one uid, UID EXPUNGE); never set `\Seen` (reads use
   `BODY.PEEK` on read-only selected folders)
 - email content is **untrusted third-party data**: bodies are returned as
   `content_untrusted`, and every tool description says so
@@ -258,7 +259,7 @@ Paste `templates/operator/AGENTS.snippet.md` into the operator repository's
 agent instructions and fill in its placeholders. It tells every future agent
 session what the tool reads, what it writes, and that email is untrusted.
 
-**Done when:** in a new agent session, the six tools are listed and a
+**Done when:** in a new agent session, the eight tools are listed and a
 `search` returns results.
 
 ### 8. Day two
@@ -292,7 +293,7 @@ of these; do not work around them.
 ```
 src/email_assistance_agent/
   config.py          Settings from env / .env, validated at startup
-  server.py          the MCP server: six tools, envelope, validation, main()
+  server.py          the MCP server: eight tools, envelope, validation, main()
   presenters.py      JSON shapes the tools return
   logging_setup.py   JSON logs with an allowlist of fields
   egress_check.py    the SMTP-blocked probe run as a Cloud Run job
@@ -303,6 +304,7 @@ src/email_assistance_agent/
     search.py        search, read_message, read_thread
     reply.py         build_reply: recipients, threading, quote, signature
     compose.py       build_new_draft: a new email to plain addresses
+    draft_edit.py    update and delete, only for the service's own drafts
     drafts.py        append_draft, list_drafts
 tests/               unit, integration (tools in process, HTTP), guard
 infra/               OpenTofu root module, no values; tests with a mocked provider
