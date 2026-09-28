@@ -293,3 +293,22 @@ def test_delete_draft_removes_only_agent_drafts(mailbox: FakeImap) -> None:
 
     assert result["error"] == "Draft 11 was not found."
     assert mailbox.deleted == [(DRAFTS_FOLDER, 3)]
+
+
+def test_read_then_update_adds_a_line_without_repeating_signature(mailbox: FakeImap) -> None:
+    call("compose_draft", {"to": ["andrea@example.org"], "subject": "Invite", "body": "Hello Andrea"})
+    mailbox.messages.append(FakeMail(12, mailbox.appended[0][1], folder=DRAFTS_FOLDER))
+
+    read = call("read_draft", {"draft_uid": 12})["data"]
+    call("update_draft", {"draft_uid": 12, "body": read["editable_text"] + "\n\nCheers"})
+
+    assert read["editable_text"] == "Hello Andrea"
+    payload = message_from_bytes(mailbox.appended[1][1]).get_payload(decode=True)
+    assert isinstance(payload, bytes)
+    assert payload.decode() == "Hello Andrea\n\nCheers\n\n-- \nMe\nExample Ltd\n"
+
+
+def test_read_draft_does_not_reach_other_mail(mailbox: FakeImap) -> None:
+    result = call("read_draft", {"draft_uid": 1})
+
+    assert result["error"] == "Draft 1 was not found."

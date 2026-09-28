@@ -20,7 +20,7 @@ whatever the code, the model or the agent driving it does:
 |---|---|---|
 | Credential | A Gmail app password: IMAP and SMTP only, no Gmail REST API | Google's documentation |
 | Network | All Cloud Run egress goes through a VPC whose firewall denies tcp 465 and 587; Google Cloud blocks 25 | the `egress-check` job (`make verify`); OpenTofu tests |
-| Code | No SMTP or send call in `src/`; exactly eight tools; none sends or moves mail, and the only deletion is of drafts the service created itself | a pre-commit hook; the tool allowlist test |
+| Code | No SMTP or send call in `src/`; exactly nine tools; none sends or moves mail, and the only deletion is of drafts the service created itself | a pre-commit hook; the tool allowlist test |
 
 Why an app password and not OAuth: every Gmail scope that can create drafts
 can also send (`gmail.compose`, `gmail.modify`), and IMAP over OAuth needs the

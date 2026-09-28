@@ -259,7 +259,7 @@ Paste `templates/operator/AGENTS.snippet.md` into the operator repository's
 agent instructions and fill in its placeholders. It tells every future agent
 session what the tool reads, what it writes, and that email is untrusted.
 
-**Done when:** in a new agent session, the eight tools are listed and a
+**Done when:** in a new agent session, the nine tools are listed and a
 `search` returns results.
 
 ### 8. Day two
@@ -293,7 +293,7 @@ of these; do not work around them.
 ```
 src/email_assistance_agent/
   config.py          Settings from env / .env, validated at startup
-  server.py          the MCP server: eight tools, envelope, validation, main()
+  server.py          the MCP server: nine tools, envelope, validation, main()
   presenters.py      JSON shapes the tools return
   logging_setup.py   JSON logs with an allowlist of fields
   egress_check.py    the SMTP-blocked probe run as a Cloud Run job
@@ -304,7 +304,7 @@ src/email_assistance_agent/
     search.py        search, read_message, read_thread
     reply.py         build_reply: recipients, threading, quote, signature
     compose.py       build_new_draft: a new email to plain addresses
-    draft_edit.py    update and delete, only for the service's own drafts
+    draft_edit.py    read, update and delete, only for the service's own drafts
     drafts.py        append_draft, list_drafts
 tests/               unit, integration (tools in process, HTTP), guard
 infra/               OpenTofu root module, no values; tests with a mocked provider
@@ -378,6 +378,10 @@ For local runs, copy `.env.example` to `.env` and use a **test mailbox**.
   response shapes needs a manual run against a test mailbox (`make run` and an
   MCP client), and the result belongs in the pull request description.
 
+- **Draft uids are not message uids.** `list_drafts` and the draft tools use
+  uids in the Drafts folder; `read_message` looks in All Mail. Read a draft with
+  `read_draft`, and pass its `editable_text` to `update_draft`, which re-adds the
+  signature and quote.
 - **`gcloud run services proxy` sends the legacy host** `<service>-<hash>-<region>.a.run.app`,
   not the deterministic one. The hash only exists after creation, so
   `ALLOWED_HOSTS` allows it by pattern (`http_guard.py`); the Origin check is

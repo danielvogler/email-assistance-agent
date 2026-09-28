@@ -1,8 +1,8 @@
 """The draft-only MCP server.
 
-Eight tools: search, read_message, read_thread, list_drafts, create_draft
-(a reply), compose_draft (a new email), update_draft and delete_draft. The
-last two act only on drafts this service created.
+Nine tools: search, read_message, read_thread, list_drafts, read_draft,
+create_draft (a reply), compose_draft (a new email), update_draft and
+delete_draft. The last three act only on drafts this service created.
 There is no send or move tool; the two draft tools only reach drafts this
 service created, and tests pin the list. Every tool
 opens its own IMAP connection, returns an ok/error envelope, and logs only
@@ -59,6 +59,7 @@ ALLOWED_TOOLS = frozenset(
         "read_message",
         "read_thread",
         "list_drafts",
+        "read_draft",
         "create_draft",
         "compose_draft",
         "update_draft",
@@ -210,8 +211,9 @@ def read_thread(uid: Uid) -> dict[str, Any]:
 @server.tool(
     annotations=READ_ONLY,
     description=(
-        "List reply drafts this service created, newest first. The mailbox owner's own "
-        "drafts are never listed. " + UNTRUSTED_NOTICE
+        "List drafts this service created, newest first. The uid of each is a draft_uid: "
+        "use read_draft to read it, not read_message. The mailbox owner's own drafts are "
+        "never listed. " + UNTRUSTED_NOTICE
     ),
 )
 def list_drafts(limit: Limit = SEARCH_LIMIT_DEFAULT) -> dict[str, Any]:
@@ -224,6 +226,28 @@ def list_drafts(limit: Limit = SEARCH_LIMIT_DEFAULT) -> dict[str, Any]:
             return [presenters.draft_summary(m) for m in mail_drafts.list_drafts(client, folder, limit)]
 
     return run_tool("list_drafts", [], action)
+
+
+@server.tool(
+    annotations=READ_ONLY,
+    description=(
+        "Read a draft you created, by the draft_uid from list_drafts, create_draft, "
+        "compose_draft or update_draft. Returns editable_text (what you wrote, without the "
+        "signature and quoted original) and the full content. To change a draft, read it "
+        "first and pass the edited editable_text to update_draft: update_draft replaces the "
+        "whole text and re-adds signature and quote itself. " + UNTRUSTED_NOTICE
+    ),
+)
+def read_draft(draft_uid: Uid) -> dict[str, Any]:
+    """Read an agent draft."""
+
+    def action() -> Any:
+        settings = get_settings()
+        with session(settings) as client:
+            folder = drafts_folder(client, settings)
+            return presenters.draft(draft_edit.read_agent_draft(client, folder, draft_uid))
+
+    return run_tool("read_draft", [draft_uid], action)
 
 
 @server.tool(
@@ -349,8 +373,9 @@ def revised_version(client: Any, old: Any, body: str, subject: str | None, setti
     annotations=CHANGES_OWN_DRAFT,
     description=(
         "Replace the text of a draft you created, keeping its recipients and thread. Use this "
-        "whenever the user asks to change a draft, instead of creating another one. Pass the "
-        "whole new text, not a diff. subject may be changed only for a new email, not a "
+        "whenever the user asks to change a draft, instead of creating another one. Read it "
+        "with read_draft first and pass the whole edited editable_text, not a diff; the "
+        "signature and quoted original are re-added automatically. subject may be changed only for a new email, not a "
         "reply. Returns the new draft_uid; the old version is removed. Drafts you did not "
         "create cannot be changed. " + UNTRUSTED_NOTICE
     ),
