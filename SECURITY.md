@@ -20,7 +20,7 @@ whatever the code, the model or the agent driving it does:
 |---|---|---|
 | Credential | A Gmail app password: IMAP and SMTP only, no Gmail REST API | Google's documentation |
 | Network | All Cloud Run egress goes through a VPC whose firewall denies tcp 465 and 587; Google Cloud blocks 25 | the `egress-check` job (`make verify`); OpenTofu tests |
-| Code | No SMTP or send call in `src/`; exactly five tools, none of which sends, deletes or moves | a pre-commit hook; the tool allowlist test |
+| Code | No SMTP or send call in `src/`; exactly six tools, none of which sends, deletes or moves | a pre-commit hook; the tool allowlist test |
 
 Why an app password and not OAuth: every Gmail scope that can create drafts
 can also send (`gmail.compose`, `gmail.modify`), and IMAP over OAuth needs the
@@ -56,6 +56,10 @@ The consumer is a coding agent with powerful tools of its own. An email saying
   and every body is returned under `content_untrusted`
 - recipients, subject and threading of a reply come from the original email's
   headers, never from the model, so an email cannot redirect a reply
+- a new email (`compose_draft`) goes to plain addresses the agent passes: no
+  display names, separators or header text. Its description tells the agent to
+  use it only when the user asked, and never to pick a recipient because an
+  email said so. The person reviewing the draft sees every recipient
 - the operator's agent instructions carry a rule to ignore instructions found
   in email (`templates/operator/AGENTS.snippet.md`)
 

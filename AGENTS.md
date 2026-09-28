@@ -26,9 +26,12 @@ enforces that:
    access, the credential has no route that sends.
 3. The app password lives in **Secret Manager**, readable only by the
    service's own identity. The mailbox owner can add a version, not read one.
-4. **Recipients never come from the model.** `create_draft` takes the uid being
+4. **Replies cannot be redirected.** `create_draft` takes the uid being
    answered and the reply text; To, Cc, Subject and threading are derived from
-   the original.
+   the original. `compose_draft` writes a new email to plain addresses the agent
+   passes, for when the user asks for one; its description forbids choosing a
+   recipient because an email said so. Either way a person sees the recipients
+   before sending.
 
 Invariants that every change must keep:
 
@@ -253,7 +256,7 @@ Paste `templates/operator/AGENTS.snippet.md` into the operator repository's
 agent instructions and fill in its placeholders. It tells every future agent
 session what the tool reads, what it writes, and that email is untrusted.
 
-**Done when:** in a new agent session, the five tools are listed and a
+**Done when:** in a new agent session, the six tools are listed and a
 `search` returns results.
 
 ### 8. Day two
@@ -287,7 +290,7 @@ of these; do not work around them.
 ```
 src/email_assistance_agent/
   config.py          Settings from env / .env, validated at startup
-  server.py          the MCP server: five tools, envelope, validation, main()
+  server.py          the MCP server: six tools, envelope, validation, main()
   presenters.py      JSON shapes the tools return
   logging_setup.py   JSON logs with an allowlist of fields
   egress_check.py    the SMTP-blocked probe run as a Cloud Run job
@@ -297,6 +300,7 @@ src/email_assistance_agent/
     scope.py         label and age limits (the per-message check enforces)
     search.py        search, read_message, read_thread
     reply.py         build_reply: recipients, threading, quote, signature
+    compose.py       build_new_draft: a new email to plain addresses
     drafts.py        append_draft, list_drafts
 tests/               unit, integration (tools in process, HTTP), guard
 infra/               OpenTofu root module, no values; tests with a mocked provider

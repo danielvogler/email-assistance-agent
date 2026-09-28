@@ -83,7 +83,10 @@ def test_every_description_marks_email_as_untrusted() -> None:
 def test_only_create_draft_writes_and_nothing_is_destructive() -> None:
     annotations = {tool.name: tool.annotations for tool in list_tools()}
 
-    assert [n for n, a in annotations.items() if not a.read_only_hint] == ["create_draft"]
+    assert sorted(n for n, a in annotations.items() if not a.read_only_hint) == [
+        "compose_draft",
+        "create_draft",
+    ]
     assert all(a.destructive_hint is False for a in annotations.values())
 
 
@@ -208,3 +211,25 @@ def test_every_call_logs_its_start_and_end(caplog: pytest.LogCaptureFixture) -> 
         server.run_tool("search", [], lambda: [])
 
     assert [r.getMessage() for r in caplog.records] == ["Tool call started", "Tool call"]
+
+
+def test_compose_draft_creates_a_new_signed_draft(mailbox: FakeImap) -> None:
+    data = call("compose_draft", {"to": ["aspast@example.org"], "subject": "hi", "body": "hello there"})[
+        "data"
+    ]
+
+    assert data == {"draft_uid": 42, "to": "aspast@example.org", "cc": "", "subject": "hi"}
+    folder, raw, flags, _ = mailbox.appended[0]
+    draft = message_from_bytes(raw)
+    assert (folder, flags) == (DRAFTS_FOLDER, (b"\\Draft",))
+    assert "In-Reply-To" not in draft
+    payload = draft.get_payload(decode=True)
+    assert isinstance(payload, bytes)
+    assert payload.decode() == "hello there\n\n-- \nMe\nExample Ltd\n"
+
+
+def test_compose_draft_rejects_addresses_with_names_or_separators(mailbox: FakeImap) -> None:
+    for to in (["Alice <a@example.org>"], ["a@example.org, b@example.org"], []):
+        with pytest.raises(ToolError):
+            anyio.run(call_tool, "compose_draft", {"to": to, "subject": "hi", "body": "x"})
+    assert mailbox.appended == []

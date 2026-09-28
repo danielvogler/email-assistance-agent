@@ -47,10 +47,10 @@ changing, and press send.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/how-it-works-dark.svg">
-  <img alt="Where each part runs, and where sending stops. On your machine, your coding agent talks MCP to localhost, where a gcloud proxy signs each request with your Google identity. In your private Google Cloud project, the email assistance agent service on Cloud Run accepts only invokers you allow; it reads the app password from Secret Manager, which nobody else can read, and offers five tools: search, read_message, read_thread, list_drafts and create_draft. All its traffic leaves through a VPC firewall. IMAP on port 993 passes, so it can read your mailbox within the labels and age you allow and append a reply draft to the Drafts folder. SMTP on ports 465 and 587 is denied at the firewall, so it cannot send. In Google Workspace, you review the draft, edit it and send it yourself. Recipients come from the original email, bodies are marked untrusted, nothing is deleted or marked read, and a person sends." src="docs/assets/how-it-works-light.svg">
+  <img alt="Where each part runs, and where sending stops. On your machine, your coding agent talks MCP to localhost, where a gcloud proxy signs each request with your Google identity. In your private Google Cloud project, the email assistance agent service on Cloud Run accepts only invokers you allow; it reads the app password from Secret Manager, which nobody else can read, and offers six tools: search, read_message, read_thread, list_drafts, create_draft and compose_draft. All its traffic leaves through a VPC firewall. IMAP on port 993 passes, so it can read your mailbox within the labels and age you allow and append drafts, replies in their thread or new emails, to the Drafts folder. SMTP on ports 465 and 587 is denied at the firewall, so it cannot send. In Google Workspace, you review the draft, edit it and send it yourself. Replies go back to the original senders, bodies are marked untrusted, nothing is deleted or marked read, and a person sends." src="docs/assets/how-it-works-light.svg">
 </picture>
 
-It is an [MCP](https://modelcontextprotocol.io) server with five tools:
+It is an [MCP](https://modelcontextprotocol.io) server with six tools:
 
 | Tool | What it does |
 |---|---|
@@ -59,6 +59,7 @@ It is an [MCP](https://modelcontextprotocol.io) server with five tools:
 | `read_thread` | The whole conversation, oldest first |
 | `list_drafts` | Replies it has prepared |
 | `create_draft` | A reply in the original conversation, waiting for you in Gmail |
+| `compose_draft` | A new email to the addresses you name, waiting for you in Gmail |
 
 ## You stay in control
 
@@ -71,8 +72,10 @@ not only by what the code happens to do:
 - **Nobody holds the password.** It lives in Secret Manager, readable only by
   the service itself. The mailbox owner can store a new one but cannot read one
   back.
-- **The model never picks who a reply goes to.** Recipients, subject and
-  threading come from the email being answered.
+- **Replies go back to the right people.** For a reply, recipients, subject
+  and threading come from the email being answered, so no email can redirect
+  it. For a new email the agent uses the addresses you gave it, and either way
+  you see the recipients before you send.
 - **It reads only what you allow:** the labels and the time window you choose.
   Anything else behaves as if it did not exist, and so do your own unsent
   drafts. Reading never marks mail as read.
