@@ -36,9 +36,13 @@ resource "google_storage_bucket" "build" {
   depends_on = [google_project_service.required]
 }
 
+# Storage Admin, not objectAdmin: Cloud Build checks the build account against
+# a user-created logs bucket and requires this role (Cloud Build docs, "Store
+# and manage build logs"). Granted on this bucket only, never the project; the
+# bucket is build scratch with a seven-day lifecycle.
 resource "google_storage_bucket_iam_member" "build_uses_bucket" {
   bucket = google_storage_bucket.build.name
-  role   = "roles/storage.objectAdmin"
+  role   = "roles/storage.admin"
   member = "serviceAccount:${google_service_account.build.email}"
 }
 
