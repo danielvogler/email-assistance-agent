@@ -87,7 +87,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # The image is the product that gets deployed: build it and prove it
-      # serves exactly the eight tools.
+      # serves exactly the nine tools.
       - name: Build and list tools
         run: scripts/docker-smoke.sh
 

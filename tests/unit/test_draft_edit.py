@@ -10,6 +10,8 @@ from email_assistance_agent.mail.draft_edit import (
     DraftError,
     DraftNotFound,
     delete_draft,
+    editable_text,
+    read_agent_draft,
     replace_draft,
     revised_new_email,
     revised_reply,
@@ -111,3 +113,36 @@ def test_revised_reply_keeps_thread_and_recipients_of_the_old_draft() -> None:
     assert (new["To"], new["Cc"]) == ("Alice <alice@example.org>", "carol@example.org")
     assert new["In-Reply-To"] == "<orig-1@example.org>"
     assert new.get_content().startswith("v2 text\n\nOn ")
+
+
+@pytest.mark.parametrize(
+    ("content", "expected"),
+    [
+        ("Hello Andrea\n\nBest\n\n-- \nDaniel\nFaviens", "Hello Andrea\n\nBest"),
+        (
+            "Thanks!\n\n-- \nMe\n\nOn Mon, 1 Sep 2026, Alice <a@example.org> wrote:\n> hi\n> there",
+            "Thanks!",
+        ),
+        ("Thanks!\n\nOn Mon, 1 Sep 2026, Alice <a@example.org> wrote:\n> hi\n>\n> there\n", "Thanks!"),
+        ("Just text, no signature\r\nsecond line", "Just text, no signature\nsecond line"),
+        ("He wrote: nothing quoted here", "He wrote: nothing quoted here"),
+    ],
+)
+def test_editable_text_drops_signature_and_quote(content: str, expected: str) -> None:
+    assert editable_text(content) == expected
+
+
+def test_read_agent_draft_reads_without_writing() -> None:
+    client = mailbox()
+
+    draft = read_agent_draft(client, DRAFTS_FOLDER, 5)
+
+    assert draft.meta.uid == 5
+    assert draft.editable_text == "Hello,\nplease send the report."
+    assert client.selections == [(DRAFTS_FOLDER, True)]
+
+
+@pytest.mark.parametrize("uid", [6, 7, 99])
+def test_read_agent_draft_hides_everything_else(uid: int) -> None:
+    with pytest.raises(DraftNotFound):
+        read_agent_draft(mailbox(), DRAFTS_FOLDER, uid)

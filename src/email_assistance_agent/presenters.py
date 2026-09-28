@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from email_assistance_agent.mail.draft_edit import DraftContent
 from email_assistance_agent.mail.fetch import MessageMeta
 from email_assistance_agent.mail.search import ReadMessage, Thread
 
@@ -59,4 +60,13 @@ def draft_summary(meta: MessageMeta) -> dict[str, Any]:
         "subject": header(meta, "Subject"),
         "in_reply_to": header(meta, "In-Reply-To"),
         "created": meta.internal_date.isoformat(),
+    }
+
+
+def draft(read: DraftContent) -> dict[str, Any]:
+    """One of the service's drafts, with the text to pass back to update_draft."""
+    return {
+        **draft_summary(read.meta),
+        "editable_text": read.editable_text,
+        "content": read.content,
     }

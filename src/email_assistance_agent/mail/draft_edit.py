@@ -13,19 +13,24 @@ draft is gone for good, not moved to Trash.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import datetime
 from email.message import EmailMessage, Message
 from email.utils import getaddresses
 from typing import Any
 
-from email_assistance_agent.mail.body import Body
+from email_assistance_agent.mail.body import Body, extract_body
 from email_assistance_agent.mail.compose import build_new_draft
 from email_assistance_agent.mail.drafts import append_draft, is_agent_draft
-from email_assistance_agent.mail.fetch import fetch_full, fetch_meta
-from email_assistance_agent.mail.reply import build_reply
+from email_assistance_agent.mail.fetch import MessageMeta, fetch_full, fetch_meta
+from email_assistance_agent.mail.reply import SIGNATURE_DELIMITER, build_reply
 
 UIDPLUS = b"UIDPLUS"
+# The quoted original at the end of a reply draft: an attribution line ending
+# in "wrote:" followed only by "> " lines.
+QUOTE_BLOCK = re.compile(r"\n\n[^\n]* wrote:\n(?:>[^\n]*(?:\n|$))*\s*$")
 
 
 class DraftNotFound(LookupError):
@@ -55,6 +60,40 @@ def load_agent_draft(client: Any, folder: str, uid: int) -> Message:
     if full is None:
         raise DraftNotFound(uid)
     return full
+
+
+@dataclass(frozen=True)
+class DraftContent:
+    """One of the service's drafts, with the part the agent wrote separated out."""
+
+    meta: MessageMeta
+    content: str
+    editable_text: str
+
+
+def editable_text(content: str) -> str:
+    """The text an update should pass back: without signature and quoted original.
+
+    update_draft re-adds both, so passing the full content back would repeat them.
+    """
+    text = content.replace("\r\n", "\n")
+    marker = f"\n\n{SIGNATURE_DELIMITER}\n"
+    if marker in text:
+        return text.split(marker, 1)[0].strip()
+    return QUOTE_BLOCK.sub("", text).strip()
+
+
+def read_agent_draft(client: Any, folder: str, uid: int) -> DraftContent:
+    """Read one of this service's drafts from the Drafts folder, without changing it."""
+    client.select_folder(folder, readonly=True)
+    metas = fetch_meta(client, [uid])
+    if not metas or not is_agent_draft(metas[0]):
+        raise DraftNotFound(uid)
+    full = fetch_full(client, uid)
+    if full is None:
+        raise DraftNotFound(uid)
+    body = extract_body(full)
+    return DraftContent(meta=metas[0], content=body.text, editable_text=editable_text(body.text))
 
 
 def delete_draft(client: Any, folder: str, uid: int) -> None:

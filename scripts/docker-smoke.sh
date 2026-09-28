@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Build the image, start it with placeholder credentials, and check that the
-# MCP endpoint lists exactly the eight tools. No mailbox is contacted: listing
+# MCP endpoint lists exactly the nine tools. No mailbox is contacted: listing
 # tools needs no IMAP login.
 set -euo pipefail
 
 IMAGE="${IMAGE:-email-assistance-agent:smoke}"
 PORT="${SMOKE_PORT:-18080}"
 NAME="email-assistance-agent-smoke-$$"
-EXPECTED="compose_draft create_draft delete_draft list_drafts read_message read_thread search update_draft"
+EXPECTED="compose_draft create_draft delete_draft list_drafts read_draft read_message read_thread search update_draft"
 
 docker build --tag "$IMAGE" .
 docker run --detach --rm --name "$NAME" --publish "127.0.0.1:${PORT}:8080" \
@@ -39,4 +39,4 @@ if [[ "$ACTUAL" != "$EXPECTED" ]]; then
   docker logs "$NAME" >&2 || true
   exit 1
 fi
-echo "PASS: image serves exactly the eight tools"
+echo "PASS: image serves exactly the nine tools"

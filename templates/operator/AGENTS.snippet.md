@@ -8,7 +8,8 @@
 - **Writes:** drafts only: replies in their thread and new emails. It can revise
   or delete the drafts it created, nothing else. It cannot send or move mail. A
   person reviews and sends every draft in Gmail.
-- When asked to change a draft, update it rather than creating another.
+- When asked to change a draft, read it with read_draft and update it rather
+  than creating another.
 - **Credential:** an app password of that mailbox, held in Secret Manager by the
   service account `email-agent-<key>`. Nobody else can read it.
 - **Start it:** from a checkout of email-assistance-agent at the pinned commit,
