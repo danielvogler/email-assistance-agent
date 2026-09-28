@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "email-assistance-agent"
-version = "0.2.0"
+version = "0.2.1"
 description = "Draft-only Gmail MCP server for coding agents: it searches, reads and drafts replies, and is deployed so it can never send."
 readme = "README.md"
 requires-python = ">=3.12"
