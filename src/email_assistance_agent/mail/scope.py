@@ -12,10 +12,16 @@ from datetime import datetime, timedelta
 
 from email_assistance_agent.config import Settings
 
-# Gmail reports the inbox in X-GM-LABELS as the system label \Inbox, and
-# searches it as in:inbox. Operators configure it by the name they see.
-INBOX_CONFIG_NAME = "inbox"
-INBOX_LABEL = "\\Inbox"
+# Gmail's system labels, by the name an operator configures: how X-GM-LABELS
+# reports each one, and how Gmail search spells it. Any other name is a user
+# label, reported and searched by its own name.
+SYSTEM_LABELS: dict[str, tuple[str, str]] = {
+    "inbox": ("\\Inbox", "in:inbox"),
+    "sent": ("\\Sent", "in:sent"),
+    "starred": ("\\Starred", "is:starred"),
+    "important": ("\\Important", "is:important"),
+}
+SEARCH_TERMS = dict(SYSTEM_LABELS.values())
 FORBIDDEN_LABEL_CHARS = frozenset('"\\()')
 
 
@@ -47,8 +53,9 @@ class ReadScope:
 def normalise_label(label: str | bytes) -> str:
     """Map a configured or reported label to one comparable form."""
     text = label.decode("utf-8", errors="replace") if isinstance(label, bytes) else label
-    if text.casefold() in (INBOX_CONFIG_NAME, INBOX_LABEL.casefold()):
-        return INBOX_LABEL
+    for config_name, (reported, _) in SYSTEM_LABELS.items():
+        if text.casefold() in (config_name, reported.casefold()):
+            return reported
     return text
 
 
@@ -77,9 +84,8 @@ def in_scope(
 
 def label_term(label: str) -> str:
     """Render one label as a Gmail search term."""
-    if normalise_label(label) == INBOX_LABEL:
-        return "in:inbox"
-    return f'label:"{label}"'
+    system_term = SEARCH_TERMS.get(normalise_label(label))
+    return system_term or f'label:"{label}"'
 
 
 def gmail_filter(scope: ReadScope, now: datetime) -> str:

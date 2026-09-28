@@ -48,6 +48,32 @@ def test_inbox_label_forms_normalise_together() -> None:
     assert normalise_label("Clients") == "Clients"
 
 
+@pytest.mark.parametrize(
+    ("configured", "reported"),
+    [("SENT", b"\\Sent"), ("Starred", b"\\Starred"), ("important", b"\\Important")],
+)
+def test_system_labels_match_what_gmail_reports(configured: str, reported: bytes) -> None:
+    scope = ReadScope(labels=frozenset({configured}))
+
+    assert in_scope([reported], NOW, scope, NOW)
+    assert not in_scope([b"\\Inbox"], NOW, scope, NOW)
+
+
+def test_inbox_plus_sent_sees_both_sides_of_a_conversation() -> None:
+    scope = ReadScope(labels=frozenset({"INBOX", "SENT"}))
+
+    assert in_scope([b"\\Inbox"], NOW, scope, NOW)
+    assert in_scope([b"\\Sent"], NOW, scope, NOW)
+    assert not in_scope([b"Archive-only"], NOW, scope, NOW)
+    assert gmail_filter(scope, NOW) == "(in:inbox OR in:sent)"
+
+
+def test_system_labels_render_as_gmail_search_terms() -> None:
+    scope = ReadScope(labels=frozenset({"STARRED", "IMPORTANT", "Key clients"}))
+
+    assert gmail_filter(scope, NOW) == '(is:important OR label:"Key clients" OR is:starred)'
+
+
 def test_gmail_filter_renders_labels_and_cutoff() -> None:
     scope = ReadScope(labels=frozenset({"INBOX", "Key clients"}), max_age=timedelta(days=30))
 
