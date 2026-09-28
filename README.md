@@ -76,7 +76,8 @@ not only by what the code happens to do:
   and threading come from the email being answered, so no email can redirect
   it. For a new email the agent uses the addresses you gave it, and either way
   you see the recipients before you send.
-- **It reads only what you allow:** the labels and the time window you choose.
+- **It reads only what you allow:** the labels (`INBOX`, `SENT`, `STARRED`,
+  `IMPORTANT` or your own) and the time window you choose.
   Anything else behaves as if it did not exist, and so do your own unsent
   drafts. Reading never marks mail as read.
 - **Email is treated as untrusted.** Every message comes back labelled as

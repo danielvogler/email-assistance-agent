@@ -94,8 +94,10 @@ before creating anything:
 
 1. **Which mailboxes**, each with a short key (`alex`), its address, who owns
    it, and who may call it.
-2. **What each may read:** `read_labels` (for example `["INBOX", "Clients"]`;
-   empty means everything) and `read_max_age_days` (empty means no limit).
+2. **What each may read:** `read_labels` (for example `["INBOX", "SENT"]`
+   for both sides of every conversation; system labels are `INBOX`, `SENT`,
+   `STARRED`, `IMPORTANT`, anything else is a user label; empty means
+   everything) and `read_max_age_days` (empty means no limit).
 3. **A dedicated GCP project.** Not a shared one: whoever holds Owner in the
    project can read every mailbox secret, which defeats the isolation.
 4. **Region**, chosen for data residency. The default is `europe-west6`.

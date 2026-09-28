@@ -32,8 +32,10 @@ mailboxes = {
     # Appended below every draft. \n for new lines.
     # signature = "Your Name\nYour Company"
 
-    # What the service may read. Empty list = every label.
-    read_labels = ["INBOX"]
+    # What the service may read. Empty list = every label. System labels:
+    # INBOX, SENT, STARRED, IMPORTANT; anything else is a user label.
+    # ["INBOX", "SENT"] shows both sides of every conversation.
+    read_labels = ["INBOX", "SENT"]
 
     # How far back it may read, by the date Gmail received the message.
     # read_max_age_days = 90
