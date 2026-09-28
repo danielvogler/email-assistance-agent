@@ -15,6 +15,7 @@ from collections.abc import Callable, Iterable
 from datetime import UTC, datetime
 from typing import Annotated, Any
 
+import uvicorn
 from imapclient.exceptions import IMAPClientError
 from mcp.server.mcpserver import MCPServer
 from mcp.server.transport_security import TransportSecuritySettings
@@ -23,6 +24,7 @@ from pydantic import Field
 
 from email_assistance_agent import presenters
 from email_assistance_agent.config import ConfigError, get_settings, load_settings
+from email_assistance_agent.http_guard import RequestGuard
 from email_assistance_agent.logging_setup import configure_logging
 from email_assistance_agent.mail import drafts as mail_drafts
 from email_assistance_agent.mail import search as mail_search
@@ -281,13 +283,21 @@ def compose_draft(
     return run_tool("compose_draft", [], action)
 
 
-def transport_security(allowed_hosts: Iterable[str]) -> TransportSecuritySettings:
-    """DNS-rebinding protection: known Host headers only, and no browser origins."""
-    return TransportSecuritySettings(
-        enable_dns_rebinding_protection=True,
-        allowed_hosts=list(allowed_hosts),
-        allowed_origins=[],
+def build_app(allowed_hosts: Iterable[str]) -> Any:
+    """The HTTP app: MCP at /mcp behind the Origin and Host guard.
+
+    The SDK's own DNS-rebinding check is off because it only accepts exact
+    host names; RequestGuard does the same job and accepts the wildcard the
+    Cloud Run proxy needs.
+    """
+    app = server.streamable_http_app(
+        streamable_http_path=MCP_PATH,
+        stateless_http=True,
+        json_response=True,
+        transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False),
+        host=BIND_HOST,
     )
+    return RequestGuard(app, allowed_hosts)
 
 
 def main() -> None:
@@ -299,12 +309,11 @@ def main() -> None:
         raise SystemExit(f"email-assistance-agent: {exc}") from None
     configure_logging(settings.log_level, secrets=(settings.email_password.get_secret_value(),))
     logger.info("Starting email-assistance-agent MCP server", extra={"tool": "startup"})
-    server.run(
-        transport="streamable-http",
+    # log_config=None keeps uvicorn on the JSON logging configured above.
+    uvicorn.run(
+        build_app(settings.allowed_hosts),
         host=BIND_HOST,
         port=settings.port,
-        streamable_http_path=MCP_PATH,
-        stateless_http=True,
-        json_response=True,
-        transport_security=transport_security(settings.allowed_hosts),
+        log_level=settings.log_level.lower(),
+        log_config=None,
     )

@@ -376,6 +376,11 @@ For local runs, copy `.env.example` to `.env` and use a **test mailbox**.
   response shapes needs a manual run against a test mailbox (`make run` and an
   MCP client), and the result belongs in the pull request description.
 
+- **`gcloud run services proxy` sends the legacy host** `<service>-<hash>-<region>.a.run.app`,
+  not the deterministic one. The hash only exists after creation, so
+  `ALLOWED_HOSTS` allows it by pattern (`http_guard.py`); the Origin check is
+  what keeps browsers out.
+
 ### Definition of done
 
 - `make check` passes: lint, format, mypy strict, pytest with at least 80%

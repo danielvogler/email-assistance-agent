@@ -1,13 +1,15 @@
 # One private Cloud Run service per mailbox, and the egress-check job.
 
 locals {
-  # The Host headers each service accepts (DNS-rebinding protection). The
-  # deterministic run.app hostname is used directly on Cloud Run; localhost
-  # covers `gcloud run services proxy`.
+  # The Host headers each service accepts. Cloud Run gives a service two
+  # names: the deterministic one below, and a legacy one with a hash that only
+  # exists after creation, which `gcloud run services proxy` uses. The legacy
+  # one is allowed by pattern; browser requests are refused regardless.
   allowed_hosts = {
     for key in keys(var.mailboxes) :
     key => join(",", [
       "${var.name_prefix}-${key}-${local.project_number}.${var.region}.run.app",
+      "${var.name_prefix}-${key}-*.a.run.app",
       "localhost:*",
       "127.0.0.1:*",
     ])
