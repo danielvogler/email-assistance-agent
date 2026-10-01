@@ -4,7 +4,8 @@ This replaces the MCP SDK's DNS-rebinding check because that one only knows
 exact host names. Cloud Run gives a service two names, and `gcloud run
 services proxy` uses the legacy one, which contains a hash that is only known
 after the service exists. So the allowlist accepts wildcard patterns such as
-`email-agent-alex-*.a.run.app`.
+`email-agent-alex-*-*.a.run.app`, where each `*` stands for exactly one run of
+letters and digits: never a dash or a dot, so `alex` cannot match `alex-work`.
 
 The check that matters most is Origin: a browser always sends it, MCP clients
 do not, and it is what stops a web page from reaching the local proxy.
@@ -12,19 +13,26 @@ do not, and it is what stops a web page from reaching the local proxy.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable
-from fnmatch import fnmatchcase
 from typing import Any
 
 from starlette.responses import PlainTextResponse
 
 ASGIApp = Any
+WILDCARD_SEGMENT = "[a-z0-9]+"
+
+
+def pattern_regex(pattern: str) -> re.Pattern[str]:
+    """Compile an allowlist pattern; `*` matches letters and digits only."""
+    parts = pattern.strip().lower().split("*")
+    return re.compile(WILDCARD_SEGMENT.join(re.escape(part) for part in parts))
 
 
 def host_allowed(host: str, patterns: Iterable[str]) -> bool:
-    """True if the Host header matches one allowlist pattern (`*` is a wildcard)."""
+    """True if the Host header matches one allowlist pattern in full."""
     candidate = host.strip().lower()
-    return bool(candidate) and any(fnmatchcase(candidate, pattern.strip().lower()) for pattern in patterns)
+    return bool(candidate) and any(pattern_regex(pattern).fullmatch(candidate) for pattern in patterns)
 
 
 class RequestGuard:
