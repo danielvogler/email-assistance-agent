@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
+from typing import Any
 
 import pytest
 
@@ -13,10 +14,12 @@ from email_assistance_agent.mail.draft_edit import (
     editable_text,
     read_agent_draft,
     replace_draft,
+    revised_draft,
     revised_new_email,
     revised_reply,
 )
 from email_assistance_agent.mail.fetch import parse_message
+from email_assistance_agent.mail.scope import ReadScope
 from tests.fakes import ALL_MAIL, DRAFTS_FOLDER, NOW, FakeImap, FakeMail, make_raw
 
 ME = "me@example.com"
@@ -159,3 +162,48 @@ def test_read_agent_draft_reads_without_writing() -> None:
 def test_read_agent_draft_hides_everything_else(uid: int) -> None:
     with pytest.raises(DraftNotFound):
         read_agent_draft(mailbox(), DRAFTS_FOLDER, uid)
+
+
+REPLY_DRAFT = (
+    b"From: me@example.com\nTo: Alice <alice@example.org>\nSubject: Re: Project update\n"
+    b"In-Reply-To: <orig-1@example.org>\nX-Drafted-By: email-assistance-agent\n\nv1\n"
+)
+
+
+def revise(client: FakeImap, old: bytes, subject: str | None = None, scope: ReadScope | None = None) -> Any:
+    return revised_draft(
+        client,
+        parse_message(old),
+        "v2",
+        subject,
+        scope=scope or ReadScope(),
+        now=NOW,
+        own_address=ME,
+        signature=None,
+    )
+
+
+def test_revised_draft_rebuilds_a_reply_from_its_original() -> None:
+    client = mailbox()
+
+    new = revise(client, REPLY_DRAFT)
+
+    assert new["In-Reply-To"] == "<orig-1@example.org>"
+    assert new.get_content().startswith("v2\n\nOn ")
+    assert client.selections == [(ALL_MAIL, True)]
+
+
+def test_revised_draft_refuses_when_the_original_is_out_of_scope() -> None:
+    with pytest.raises(DraftError, match="no longer readable"):
+        revise(mailbox(), REPLY_DRAFT, scope=ReadScope(labels=frozenset({"Clients"})))
+
+
+def test_revised_draft_keeps_the_subject_of_a_reply() -> None:
+    with pytest.raises(DraftError, match="keeps the subject"):
+        revise(mailbox(), REPLY_DRAFT, subject="new")
+
+
+def test_revised_draft_of_a_new_email_can_change_subject() -> None:
+    old = build_new_draft(["a@example.org"], "hi", "v1", own_address=ME).as_bytes()
+
+    assert revise(mailbox(), old, subject="hello")["Subject"] == "hello"

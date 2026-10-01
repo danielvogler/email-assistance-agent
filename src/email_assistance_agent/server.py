@@ -14,6 +14,7 @@ import logging
 import time
 from collections.abc import Callable, Iterable
 from datetime import UTC, datetime
+from email.message import EmailMessage
 from typing import Annotated, Any
 
 import uvicorn
@@ -39,7 +40,6 @@ from email_assistance_agent.mail.compose import (
     build_new_draft,
 )
 from email_assistance_agent.mail.draft_edit import DraftError, DraftNotFound
-from email_assistance_agent.mail.fetch import fetch_meta
 from email_assistance_agent.mail.reply import ReplyError, build_reply
 from email_assistance_agent.mail.scope import ReadScope
 from email_assistance_agent.mail.search import (
@@ -148,6 +148,16 @@ def run_tool(tool: str, uids: Iterable[int], action: Callable[[], Any]) -> dict[
     fields["duration_ms"] = round((time.monotonic() - started) * 1000)
     logger.info("Tool call", extra=fields)
     return result
+
+
+def draft_result(uid: int | None, draft: EmailMessage) -> dict[str, Any]:
+    """What a tool that stored a draft reports back."""
+    return {
+        "draft_uid": uid,
+        "to": str(draft["To"]),
+        "cc": str(draft.get("Cc", "")),
+        "subject": str(draft["Subject"]),
+    }
 
 
 def scope() -> ReadScope:
@@ -282,12 +292,7 @@ def create_draft(
                 signature=settings.email_signature,
             )
             draft_uid = mail_drafts.append_draft(client, drafts_folder(client, settings), draft, now())
-        return {
-            "draft_uid": draft_uid,
-            "to": str(draft["To"]),
-            "cc": str(draft.get("Cc", "")),
-            "subject": str(draft["Subject"]),
-        }
+        return draft_result(draft_uid, draft)
 
     return run_tool("create_draft", [reply_to_uid], action)
 
@@ -322,50 +327,9 @@ def compose_draft(
         )
         with session(settings) as client:
             draft_uid = mail_drafts.append_draft(client, drafts_folder(client, settings), draft, now())
-        return {
-            "draft_uid": draft_uid,
-            "to": str(draft["To"]),
-            "cc": str(draft.get("Cc", "")),
-            "subject": str(draft["Subject"]),
-        }
+        return draft_result(draft_uid, draft)
 
     return run_tool("compose_draft", [], action)
-
-
-def draft_result(uid: int | None, draft: Any) -> dict[str, Any]:
-    """What a tool that stored a draft reports back."""
-    return {
-        "draft_uid": uid,
-        "to": str(draft["To"]),
-        "cc": str(draft.get("Cc", "")),
-        "subject": str(draft["Subject"]),
-    }
-
-
-def revised_version(client: Any, old: Any, body: str, subject: str | None, settings: Any) -> Any:
-    """Build the next version of a draft: a reply from its original, else a new email."""
-    in_reply_to = str(old.get("In-Reply-To", "")).strip()
-    if not in_reply_to:
-        return draft_edit.revised_new_email(
-            old, body, subject, own_address=settings.email_user, signature=settings.email_signature
-        )
-    if subject is not None:
-        raise DraftError("A reply keeps the subject of the email it answers; leave subject out.")
-    client.select_folder(all_mail_folder(client), readonly=True)
-    uids = [int(u) for u in client.search(["HEADER", "Message-ID", in_reply_to])]
-    # A Message-ID can repeat (copies, re-sends): take the newest one in scope.
-    readable = mail_search.readable(fetch_meta(client, uids), scope(), now())
-    if not readable:
-        raise DraftError("The email this draft answers is no longer readable; delete it and draft again.")
-    original = mail_search.load_message(client, max(readable, key=lambda m: m.internal_date))
-    return draft_edit.revised_reply(
-        old,
-        original.raw_headers,
-        original.body,
-        body,
-        own_address=settings.email_user,
-        signature=settings.email_signature,
-    )
 
 
 @server.tool(
@@ -391,7 +355,16 @@ def update_draft(
         with session(settings) as client:
             folder = drafts_folder(client, settings)
             old = draft_edit.load_agent_draft(client, folder, draft_uid)
-            new = revised_version(client, old, body, subject, settings)
+            new = draft_edit.revised_draft(
+                client,
+                old,
+                body,
+                subject,
+                scope=scope(),
+                now=now(),
+                own_address=settings.email_user,
+                signature=settings.email_signature,
+            )
             new_uid = draft_edit.replace_draft(client, folder, draft_uid, new, now())
         return draft_result(new_uid, new)
 
