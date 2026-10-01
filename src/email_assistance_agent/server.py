@@ -3,10 +3,9 @@
 Nine tools: search, read_message, read_thread, list_drafts, read_draft,
 create_draft (a reply), compose_draft (a new email), update_draft and
 delete_draft. The last three act only on drafts this service created.
-There is no send or move tool; the two draft tools only reach drafts this
-service created, and tests pin the list. Every tool
-opens its own IMAP connection, returns an ok/error envelope, and logs only
-the tool name, uids, outcome and duration.
+There is no send or move tool, and tests pin the list. Every tool opens its
+own IMAP connection, returns an ok/error envelope, and logs only the tool
+name, uids, outcome and duration.
 """
 
 from __future__ import annotations

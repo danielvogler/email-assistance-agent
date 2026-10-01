@@ -221,8 +221,9 @@ must pass:
 
 1. `make verify PROJECT=<PROJECT> REGION=<REGION>` succeeds: SMTP ports are
    BLOCKED and IMAP is OPEN from the service network.
-2. With the proxy running (step 7), the MCP tool list is exactly `search`,
-   `read_message`, `read_thread`, `list_drafts`, `create_draft`.
+2. With the proxy running (step 7), the MCP tool list is exactly
+   `search`, `read_message`, `read_thread`, `list_drafts`, `read_draft`,
+   `create_draft`, `compose_draft`, `update_draft`, `delete_draft`.
 3. `create_draft` on a message in the mailbox: the draft appears in Gmail
    inside the original conversation, To/Cc/Subject are right, and the original
    is still unread if it was unread.

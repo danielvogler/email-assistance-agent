@@ -1,7 +1,8 @@
 """Fetch message metadata and bodies without changing any flags.
 
-Every fetch uses BODY.PEEK and every folder is selected read-only, so reading
-never marks a message as seen.
+Every fetch uses BODY.PEEK, so reading never marks a message as seen. Folders
+are selected read-only, except Drafts when the service revises or deletes its
+own drafts.
 """
 
 from __future__ import annotations
