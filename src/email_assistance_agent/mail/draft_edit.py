@@ -96,11 +96,16 @@ def read_agent_draft(client: Any, folder: str, uid: int) -> DraftContent:
     return DraftContent(meta=metas[0], content=body.text, editable_text=editable_text(body.text))
 
 
+def require_uidplus(client: Any) -> None:
+    """Refuse before any change when the server cannot expunge a single uid."""
+    if UIDPLUS not in client.capabilities():
+        raise DraftError("The mail server cannot delete a single message safely (no UIDPLUS).")
+
+
 def delete_draft(client: Any, folder: str, uid: int) -> None:
     """Permanently remove one of this service's drafts, and nothing else."""
     load_agent_draft(client, folder, uid)
-    if UIDPLUS not in client.capabilities():
-        raise DraftError("The mail server cannot delete a single message safely (no UIDPLUS).")
+    require_uidplus(client)
     client.delete_messages([uid])
     client.uid_expunge([uid])
 
@@ -139,7 +144,12 @@ def revised_reply(
 
 
 def replace_draft(client: Any, folder: str, old_uid: int, new: EmailMessage, now: datetime) -> int | None:
-    """Store the new version, then remove the old one."""
+    """Store the new version, then remove the old one.
+
+    Ownership and UIDPLUS are checked first, so a refused update stores nothing.
+    """
+    load_agent_draft(client, folder, old_uid)
+    require_uidplus(client)
     new_uid = append_draft(client, folder, new, now)
     delete_draft(client, folder, old_uid)
     return new_uid

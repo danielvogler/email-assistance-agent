@@ -81,6 +81,19 @@ def test_replace_keeps_the_old_draft_when_it_is_not_ours() -> None:
         replace_draft(client, DRAFTS_FOLDER, 6, new, NOW)
 
     assert client.deleted == []
+    assert client.appended == []
+
+
+def test_replace_stores_nothing_without_uidplus() -> None:
+    client = mailbox()
+    client.uidplus = False
+    new = build_new_draft(["a@example.org"], "v2", "second", own_address=ME)
+
+    with pytest.raises(DraftError, match="UIDPLUS"):
+        replace_draft(client, DRAFTS_FOLDER, 5, new, NOW)
+
+    assert client.appended == []
+    assert client.deleted == []
 
 
 def test_revised_new_email_keeps_recipients_and_can_change_subject() -> None:
