@@ -4,7 +4,7 @@ import pytest
 
 from email_assistance_agent.http_guard import host_allowed
 
-PATTERNS = ("localhost:*", "127.0.0.1:*", "svc-123.europe-west6.run.app", "svc-*.a.run.app")
+PATTERNS = ("localhost:*", "127.0.0.1:*", "svc-123.europe-west6.run.app", "svc-*-*.a.run.app")
 
 
 @pytest.mark.parametrize(
@@ -14,7 +14,7 @@ PATTERNS = ("localhost:*", "127.0.0.1:*", "svc-123.europe-west6.run.app", "svc-*
         "127.0.0.1:18080",
         "svc-123.europe-west6.run.app",
         "svc-6dlg5woxea-oa.a.run.app",
-        "SVC-X.A.RUN.APP",
+        "SVC-6DLG5WOXEA-OA.A.RUN.APP",
     ],
 )
 def test_allowed_hosts(host: str) -> None:
@@ -28,6 +28,9 @@ def test_allowed_hosts(host: str) -> None:
         "evil.example",
         "svc-6dlg5woxea-oa.a.run.app.evil.example",
         "other-6dlg5woxea-oa.a.run.app",
+        "svc-work-6dlg5woxea-oa.a.run.app",
+        "svc-6dlg5woxea.oa.a.run.app",
+        "localhost:8080.evil.example",
         "localhost",
     ],
 )

@@ -26,7 +26,7 @@ HEADERS = {"accept": "application/json, text/event-stream", "content-type": "app
 
 
 def app(
-    allowed_hosts: tuple[str, ...] = ("localhost:*", "service.run.app", "email-agent-alex-*.a.run.app"),
+    allowed_hosts: tuple[str, ...] = ("localhost:*", "service.run.app", "email-agent-alex-*-*.a.run.app"),
 ) -> Any:
     return server.build_app(allowed_hosts)
 
@@ -93,6 +93,9 @@ def test_main_serves_through_the_guard(monkeypatch: pytest.MonkeyPatch) -> None:
     assert guard.allowed_hosts == ("svc.run.app", "svc-*.a.run.app")
 
 
-def test_another_service_legacy_host_is_rejected() -> None:
-    with TestClient(app(), base_url="http://email-agent-sam-6dlg5woxea-oa.a.run.app") as client:
+@pytest.mark.parametrize(
+    "host", ["email-agent-sam-6dlg5woxea-oa.a.run.app", "email-agent-alex-work-6dlg5woxea-oa.a.run.app"]
+)
+def test_another_service_legacy_host_is_rejected(host: str) -> None:
+    with TestClient(app(), base_url=f"http://{host}") as client:
         assert post(client, LIST).status_code == 421

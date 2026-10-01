@@ -9,7 +9,7 @@ locals {
     for key in keys(var.mailboxes) :
     key => join(",", [
       "${var.name_prefix}-${key}-${local.project_number}.${var.region}.run.app",
-      "${var.name_prefix}-${key}-*.a.run.app",
+      "${var.name_prefix}-${key}-*-*.a.run.app",
       "localhost:*",
       "127.0.0.1:*",
     ])

@@ -217,7 +217,7 @@ run "services_accept_their_proxy_host" {
     condition = strcontains(one([
       for e in google_cloud_run_v2_service.mailbox["alex"].template[0].containers[0].env :
       e.value if e.name == "ALLOWED_HOSTS"
-    ]), "email-agent-alex-*.a.run.app")
+    ]), "email-agent-alex-*-*.a.run.app")
     error_message = "Each service must accept its own legacy run.app host, which gcloud run services proxy uses."
   }
 }

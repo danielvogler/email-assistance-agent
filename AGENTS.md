@@ -221,8 +221,9 @@ must pass:
 
 1. `make verify PROJECT=<PROJECT> REGION=<REGION>` succeeds: SMTP ports are
    BLOCKED and IMAP is OPEN from the service network.
-2. With the proxy running (step 7), the MCP tool list is exactly `search`,
-   `read_message`, `read_thread`, `list_drafts`, `create_draft`.
+2. With the proxy running (step 7), the MCP tool list is exactly
+   `search`, `read_message`, `read_thread`, `list_drafts`, `read_draft`,
+   `create_draft`, `compose_draft`, `update_draft`, `delete_draft`.
 3. `create_draft` on a message in the mailbox: the draft appears in Gmail
    inside the original conversation, To/Cc/Subject are right, and the original
    is still unread if it was unread.
@@ -385,7 +386,9 @@ For local runs, copy `.env.example` to `.env` and use a **test mailbox**.
 - **`gcloud run services proxy` sends the legacy host** `<service>-<hash>-<region>.a.run.app`,
   not the deterministic one. The hash only exists after creation, so
   `ALLOWED_HOSTS` allows it by pattern (`http_guard.py`); the Origin check is
-  what keeps browsers out.
+  what keeps browsers out. A `*` there matches letters and digits only, so the
+  pattern is `<service>-*-*.a.run.app`, and one mailbox's pattern never matches
+  another's host.
 
 ### Definition of done
 
