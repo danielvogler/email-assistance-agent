@@ -16,7 +16,7 @@ from mcp.types import CallToolResult
 
 from email_assistance_agent import server
 from email_assistance_agent.mail.search import MessageNotFound
-from tests.fakes import DRAFTS_FOLDER, NOW, FakeImap, FakeMail, make_raw
+from tests.fakes import DRAFTS_FOLDER, NOW, FakeImap, FakeMail, html_part, make_raw, text_part
 
 FORBIDDEN_WORDS = ("send", "delete", "move", "expunge", "trash", "flag")
 
@@ -80,6 +80,12 @@ def test_no_tool_name_suggests_sending_or_touching_other_mail() -> None:
 def test_every_description_marks_email_as_untrusted() -> None:
     for tool in list_tools():
         assert server.UNTRUSTED_NOTICE in (tool.description or ""), tool.name
+
+
+def test_tools_that_take_draft_text_describe_the_format() -> None:
+    described = {tool.name for tool in list_tools() if server.FORMAT_NOTICE in (tool.description or "")}
+
+    assert described == {"create_draft", "compose_draft", "update_draft"}
 
 
 def test_writes_and_destructive_tools_are_exactly_the_draft_tools() -> None:
@@ -146,9 +152,7 @@ def test_create_draft_threads_quotes_and_signs(mailbox: FakeImap) -> None:
     draft = message_from_bytes(raw)
     assert (folder, flags) == (DRAFTS_FOLDER, (b"\\Draft",))
     assert draft["In-Reply-To"] == "<orig-1@example.org>"
-    payload = draft.get_payload(decode=True)
-    assert isinstance(payload, bytes)
-    text = payload.decode()
+    text = text_part(draft)
     assert "Will do. [TODO: date]\n\n-- \nMe\nExample Ltd\n\nOn " in text
 
 
@@ -224,9 +228,8 @@ def test_compose_draft_creates_a_new_signed_draft(mailbox: FakeImap) -> None:
     draft = message_from_bytes(raw)
     assert (folder, flags) == (DRAFTS_FOLDER, (b"\\Draft",))
     assert "In-Reply-To" not in draft
-    payload = draft.get_payload(decode=True)
-    assert isinstance(payload, bytes)
-    assert payload.decode() == "hello there\n\n-- \nMe\nExample Ltd\n"
+    text = text_part(draft)
+    assert text == "hello there\n\n-- \nMe\nExample Ltd\n"
 
 
 def test_compose_draft_rejects_addresses_with_names_or_separators(mailbox: FakeImap) -> None:
@@ -259,9 +262,8 @@ def test_update_draft_replaces_a_reply_in_place(mailbox: FakeImap) -> None:
     assert mailbox.deleted == [(DRAFTS_FOLDER, 9)]
     new = message_from_bytes(mailbox.appended[0][1])
     assert new["In-Reply-To"] == "<orig-1@example.org>"
-    payload = new.get_payload(decode=True)
-    assert isinstance(payload, bytes)
-    assert payload.decode().startswith("second version\n\n-- \nMe\nExample Ltd\n\nOn ")
+    text = text_part(new)
+    assert text.startswith("second version\n\n-- \nMe\nExample Ltd\n\nOn ")
 
 
 def test_update_draft_rejects_a_new_subject_for_a_reply(mailbox: FakeImap) -> None:
@@ -303,12 +305,29 @@ def test_read_then_update_adds_a_line_without_repeating_signature(mailbox: FakeI
     call("update_draft", {"draft_uid": 12, "body": read["editable_text"] + "\n\nCheers"})
 
     assert read["editable_text"] == "Hello Andrea"
-    payload = message_from_bytes(mailbox.appended[1][1]).get_payload(decode=True)
-    assert isinstance(payload, bytes)
-    assert payload.decode() == "Hello Andrea\n\nCheers\n\n-- \nMe\nExample Ltd\n"
+    text = text_part(message_from_bytes(mailbox.appended[1][1]))
+    assert text == "Hello Andrea\n\nCheers\n\n-- \nMe\nExample Ltd\n"
 
 
 def test_read_draft_does_not_reach_other_mail(mailbox: FakeImap) -> None:
     result = call("read_draft", {"draft_uid": 1})
 
     assert result["error"] == "Draft 1 was not found."
+
+
+def test_markdown_round_trips_through_read_and_update(mailbox: FakeImap) -> None:
+    body = "**Agenda**\n- budget\n- see https://example.org/plan"
+    call("compose_draft", {"to": ["andrea@example.org"], "subject": "Plan", "body": body})
+    mailbox.messages.append(FakeMail(12, mailbox.appended[0][1], folder=DRAFTS_FOLDER))
+
+    read = call("read_draft", {"draft_uid": 12})["data"]
+    call("update_draft", {"draft_uid": 12, "body": read["editable_text"] + "\n- <b>dates</b>"})
+
+    assert read["editable_text"] == body
+    new = message_from_bytes(mailbox.appended[1][1])
+    assert text_part(new).startswith(body + "\n- <b>dates</b>\n\n-- \n")
+    assert (
+        "<p><strong>Agenda</strong></p><ul><li>budget</li><li>see "
+        '<a href="https://example.org/plan">https://example.org/plan</a></li>'
+        "<li>&lt;b&gt;dates&lt;/b&gt;</li></ul>"
+    ) in html_part(new)

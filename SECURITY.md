@@ -68,6 +68,21 @@ The consumer is a coding agent with powerful tools of its own. An email saying
 - the operator's agent instructions carry a rule to ignore instructions found
   in email (`templates/operator/AGENTS.snippet.md`)
 
+### Formatted drafts show what they are
+
+Each draft carries a text part (the Markdown the agent wrote) and an HTML part
+rendered from that same source by `mail/render.py`, so the two cannot say
+different things. Because HTML could show the reviewer something other than
+what is there, the renderer escapes everything first and adds only:
+
+- the tags `p`, `br`, `strong`, `em`, `ul`, `li`, `a` and `blockquote`, and no
+  attribute other than `href`
+- links for `https:` URLs and email addresses (`mailto:`), whose visible text
+  is always the target itself, so a link cannot hide where it goes
+- no images, styles or remote resources, so opening a draft tells no one
+- the quoted original as escaped text from its text version, never its own
+  HTML, so third-party trackers and scripts do not come along
+
 ### It reads only what it is allowed to
 
 Each mailbox has a read scope: allowed labels and a maximum age, by the date

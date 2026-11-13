@@ -62,7 +62,7 @@ variable "mailboxes" {
       owner_member      who may store a new app password (e.g. "user:you@example.com"); they cannot read one back
       invoker_members   who may call this mailbox's service
       secret_version    the app password version to run with; null until one has been added
-      signature         appended below every draft
+      signature         appended below every draft; **bold** and *italic* format, an email address becomes a link
       read_labels       labels the service may read (INBOX, SENT, STARRED, IMPORTANT or user labels); empty means all
       read_max_age_days how far back it may read; null means no limit
   EOT

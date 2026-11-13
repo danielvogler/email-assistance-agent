@@ -42,8 +42,9 @@ anything about the tool to start.
 **email assistance agent gives a coding agent your mailbox.** It can search
 it, read messages and whole conversations, and prepare replies. A reply arrives
 in Gmail inside the original conversation, addressed to the right people, with
-the original quoted and your signature below. You read it, change what needs
-changing, and press send.
+the original quoted and your signature below. Bold, italic, lists and links
+come through as formatting in Gmail, and as readable text in a plain-text
+client. You read it, change what needs changing, and press send.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/how-it-works-dark.svg">

@@ -5,7 +5,7 @@ import pytest
 from email_assistance_agent.mail.body import Body
 from email_assistance_agent.mail.fetch import parse_message
 from email_assistance_agent.mail.reply import ReplyError, build_reply, reply_subject
-from tests.fakes import make_raw
+from tests.fakes import html_part, make_raw, text_part
 
 ME = "me@example.com"
 ORIGINAL_BODY = Body(text="Line one\nLine two", truncated=False)
@@ -99,7 +99,7 @@ def test_body_order_text_signature_quote() -> None:
         parse_message(make_raw()), ORIGINAL_BODY, "Thanks!", own_address=ME, signature="Daniel\nACME"
     )
 
-    text = draft.get_content()
+    text = text_part(draft)
     assert text.index("Thanks!") < text.index("-- \nDaniel\nACME") < text.index("wrote:")
     assert "On Sat, 26 Sep 2026 12:00:00 +0000, Alice <alice@example.org> wrote:" in text
     assert "> Line one\n> Line two" in text
@@ -108,7 +108,7 @@ def test_body_order_text_signature_quote() -> None:
 def test_no_signature_block_when_unset() -> None:
     draft = build_reply(parse_message(make_raw()), ORIGINAL_BODY, "Thanks!", own_address=ME)
 
-    assert "-- \n" not in draft.get_content()
+    assert "-- \n" not in text_part(draft)
 
 
 def test_truncated_quote_ends_with_marker() -> None:
@@ -116,7 +116,7 @@ def test_truncated_quote_ends_with_marker() -> None:
         parse_message(make_raw()), Body(text="partial", truncated=True), "Thanks!", own_address=ME
     )
 
-    assert draft.get_content().rstrip().endswith("> partial\n> [...]")
+    assert text_part(draft).rstrip().endswith("> partial\n> [...]")
 
 
 def test_quote_without_date_uses_sender_only() -> None:
@@ -124,4 +124,21 @@ def test_quote_without_date_uses_sender_only() -> None:
 
     draft = build_reply(parse_message(raw), Body(text="", truncated=False), "Hi", own_address=ME)
 
-    assert "alice@example.org wrote:\n>" in draft.get_content()
+    assert "alice@example.org wrote:\n>" in text_part(draft)
+
+
+def test_reply_is_text_and_html_alternatives() -> None:
+    draft = build_reply(
+        parse_message(make_raw()),
+        Body(text="<img src=https://t.example/p.gif> hi", truncated=False),
+        "**Yes**, see https://example.org",
+        own_address=ME,
+        signature="**Me**\nme@example.com",
+    )
+
+    assert draft.get_content_type() == "multipart/alternative"
+    assert text_part(draft).startswith("**Yes**, see https://example.org\n\n-- \n**Me**\n")
+    html = html_part(draft)
+    assert "<strong>Yes</strong>" in html
+    assert '<a href="mailto:me@example.com">me@example.com</a>' in html
+    assert "<blockquote>&lt;img src=https://t.example/p.gif&gt; hi</blockquote>" in html

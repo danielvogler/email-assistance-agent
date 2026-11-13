@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-from email_assistance_agent.mail.body import Body
+from email_assistance_agent.mail.body import Body, extract_body
 from email_assistance_agent.mail.compose import build_new_draft
 from email_assistance_agent.mail.draft_edit import (
     DraftError,
@@ -19,8 +19,9 @@ from email_assistance_agent.mail.draft_edit import (
     revised_reply,
 )
 from email_assistance_agent.mail.fetch import parse_message
+from email_assistance_agent.mail.reply import build_reply
 from email_assistance_agent.mail.scope import ReadScope
-from tests.fakes import ALL_MAIL, DRAFTS_FOLDER, NOW, FakeImap, FakeMail, make_raw
+from tests.fakes import ALL_MAIL, DRAFTS_FOLDER, NOW, FakeImap, FakeMail, make_raw, text_part
 
 ME = "me@example.com"
 MARK = [("X-Drafted-By", "email-assistance-agent")]
@@ -107,7 +108,7 @@ def test_revised_new_email_keeps_recipients_and_can_change_subject() -> None:
     new = revised_new_email(old, "v2", "hello", own_address=ME, signature="Me")
 
     assert (new["To"], new["Cc"], new["Subject"]) == ("a@example.org", "b@example.org", "hello")
-    assert new.get_content() == "v2\n\n-- \nMe\n"
+    assert text_part(new) == "v2\n\n-- \nMe\n"
 
 
 def test_revised_new_email_keeps_subject_by_default() -> None:
@@ -128,7 +129,7 @@ def test_revised_reply_keeps_thread_and_recipients_of_the_old_draft() -> None:
 
     assert (new["To"], new["Cc"]) == ("Alice <alice@example.org>", "carol@example.org")
     assert new["In-Reply-To"] == "<orig-1@example.org>"
-    assert new.get_content().startswith("v2 text\n\nOn ")
+    assert text_part(new).startswith("v2 text\n\nOn ")
 
 
 @pytest.mark.parametrize(
@@ -189,7 +190,7 @@ def test_revised_draft_rebuilds_a_reply_from_its_original() -> None:
     new = revise(client, REPLY_DRAFT)
 
     assert new["In-Reply-To"] == "<orig-1@example.org>"
-    assert new.get_content().startswith("v2\n\nOn ")
+    assert text_part(new).startswith("v2\n\nOn ")
     assert client.selections == [(ALL_MAIL, True)]
 
 
@@ -207,3 +208,11 @@ def test_revised_draft_of_a_new_email_can_change_subject() -> None:
     old = build_new_draft(["a@example.org"], "hi", "v1", own_address=ME).as_bytes()
 
     assert revise(mailbox(), old, subject="hello")["Subject"] == "hello"
+
+
+def test_editable_text_of_a_stored_multipart_reply_is_the_markdown() -> None:
+    body = "**Yes**\n- one\n- two"
+    draft = build_reply(parse_message(make_raw()), Body("hi", False), body, own_address=ME)
+    stored = parse_message(draft.as_bytes())
+
+    assert editable_text(extract_body(stored).text) == body

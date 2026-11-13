@@ -12,6 +12,7 @@ from email.message import EmailMessage, Message
 from email.utils import formataddr, formatdate, getaddresses, make_msgid
 
 from email_assistance_agent.mail.body import Body
+from email_assistance_agent.mail.render import Quote, draft_html, set_bodies
 
 AGENT_MARKER_HEADER = "X-Drafted-By"
 AGENT_MARKER_VALUE = "email-assistance-agent"
@@ -54,24 +55,30 @@ def reply_subject(original_subject: str) -> str:
     return REPLY_PREFIX + subject
 
 
-def quote(original: Message, original_body: Body) -> str:
-    """Render the original as an attributed plain-text quote."""
+def quoted_original(original: Message, original_body: Body) -> Quote:
+    """The attribution line and text lines of the original, for both draft parts."""
     sender = str(original.get("From", "")).strip() or "the sender"
     date = str(original.get("Date", "")).strip()
     attribution = f"On {date}, {sender} wrote:" if date else f"{sender} wrote:"
     lines = original_body.text.splitlines() or [""]
     if original_body.truncated:
         lines = [*lines, TRUNCATION_MARKER]
-    quoted = "\n".join((QUOTE_PREFIX + line).rstrip() for line in lines)
-    return f"{attribution}\n{quoted}"
+    return Quote(attribution=attribution, lines=tuple(lines))
 
 
-def compose_text(body: str, signature: str | None, original: Message, original_body: Body) -> str:
-    """Lay out reply text, then signature, then the quoted original."""
+def quote(original: Quote) -> str:
+    """Render the original as an attributed plain-text quote."""
+    quoted = "\n".join((QUOTE_PREFIX + line).rstrip() for line in original.lines)
+    return f"{original.attribution}\n{quoted}"
+
+
+def compose_text(body: str, signature: str | None, original: Quote | None) -> str:
+    """Lay out the text part: body, then signature, then the quoted original if any."""
     sections = [body.strip()]
     if signature and signature.strip():
         sections.append(f"{SIGNATURE_DELIMITER}\n{signature.strip()}")
-    sections.append(quote(original, original_body))
+    if original is not None:
+        sections.append(quote(original))
     return "\n\n".join(sections) + "\n"
 
 
@@ -112,5 +119,10 @@ def build_reply(
     draft["In-Reply-To"] = message_id
     draft["References"] = " ".join(filter(None, [str(original.get("References", "")).strip(), message_id]))
     draft[AGENT_MARKER_HEADER] = AGENT_MARKER_VALUE
-    draft.set_content(compose_text(body, signature, original, original_body))
+    original_quote = quoted_original(original, original_body)
+    set_bodies(
+        draft,
+        compose_text(body, signature, original_quote),
+        draft_html(body, signature, original_quote),
+    )
     return draft

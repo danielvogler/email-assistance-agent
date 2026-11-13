@@ -40,6 +40,9 @@ Invariants that every change must keep:
   `BODY.PEEK` on read-only selected folders)
 - email content is **untrusted third-party data**: bodies are returned as
   `content_untrusted`, and every tool description says so
+- a draft's HTML part is rendered from its text part by `mail/render.py`:
+  allow-listed tags, `href` as the only attribute, links that show their
+  target, no images, styles or remote resources, the quote as escaped text
 - logs carry tool name, uids, outcome and duration only; never bodies,
   subjects, addresses or credentials
 - no company-specific values in this repository; it is public
@@ -305,6 +308,7 @@ src/email_assistance_agent/
     search.py        search, read_message, read_thread
     reply.py         build_reply: recipients, threading, quote, signature
     compose.py       build_new_draft: a new email to plain addresses
+    render.py        the Markdown subset to safe HTML for a draft's HTML part
     draft_edit.py    read, update and delete, only for the service's own drafts
     drafts.py        append_draft, list_drafts
 tests/               unit, integration (tools in process, HTTP), guard
@@ -389,6 +393,14 @@ For local runs, copy `.env.example` to `.env` and use a **test mailbox**.
   what keeps browsers out. A `*` there matches letters and digits only, so the
   pattern is `<service>-*-*.a.run.app`, and one mailbox's pattern never matches
   another's host.
+
+- **A draft is `multipart/alternative`.** The text part keeps the Markdown,
+  which is what `read_draft` returns as `editable_text`, so `update_draft`
+  round-trips. In tests, read the parts with `text_part` and `html_part` from
+  `tests/fakes.py`, not `get_content()`.
+- **A single newline in a draft is a line break**, not a space as in standard
+  Markdown, so signatures and address blocks keep their lines. Named links
+  `[text](url)` and numbered lists are left as typed on purpose.
 
 ### Definition of done
 
