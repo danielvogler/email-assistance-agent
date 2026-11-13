@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from email.message import EmailMessage
+from email.message import EmailMessage, Message
 from email.utils import format_datetime
 from typing import Any
 
@@ -18,6 +18,25 @@ from imapclient.imapclient import ALL, DRAFTS
 ALL_MAIL = "[Gmail]/All Mail"
 DRAFTS_FOLDER = "[Gmail]/Drafts"
 NOW = datetime(2026, 9, 26, 12, 0, tzinfo=UTC)
+
+
+def part(draft: Message, subtype: str) -> str:
+    """The decoded text of a draft's text/<subtype> part, which must exist exactly once."""
+    parts = [p for p in draft.walk() if p.get_content_type() == f"text/{subtype}"]
+    assert len(parts) == 1, f"expected one text/{subtype} part, found {len(parts)}"
+    payload = parts[0].get_payload(decode=True)
+    assert isinstance(payload, bytes)
+    return payload.decode(parts[0].get_content_charset() or "utf-8")
+
+
+def text_part(draft: Message) -> str:
+    """The plain-text (Markdown) part of a draft."""
+    return part(draft, "plain")
+
+
+def html_part(draft: Message) -> str:
+    """The HTML part of a draft."""
+    return part(draft, "html")
 
 
 @dataclass(frozen=True)

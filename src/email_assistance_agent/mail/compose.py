@@ -12,7 +12,8 @@ from collections.abc import Sequence
 from email.message import EmailMessage
 from email.utils import formatdate, make_msgid
 
-from email_assistance_agent.mail.reply import AGENT_MARKER_HEADER, AGENT_MARKER_VALUE, SIGNATURE_DELIMITER
+from email_assistance_agent.mail.render import draft_html, set_bodies
+from email_assistance_agent.mail.reply import AGENT_MARKER_HEADER, AGENT_MARKER_VALUE, compose_text
 
 MAX_RECIPIENTS = 20
 # Plain addresses only: no display names, quotes, angle brackets or separators,
@@ -72,8 +73,5 @@ def build_new_draft(
     draft["Date"] = formatdate(localtime=True)
     draft["Message-ID"] = make_msgid(domain=own_address.rsplit("@", 1)[1])
     draft[AGENT_MARKER_HEADER] = AGENT_MARKER_VALUE
-    text = body.strip()
-    if signature and signature.strip():
-        text = f"{text}\n\n{SIGNATURE_DELIMITER}\n{signature.strip()}"
-    draft.set_content(text + "\n")
+    set_bodies(draft, compose_text(body, signature, None), draft_html(body, signature, None))
     return draft

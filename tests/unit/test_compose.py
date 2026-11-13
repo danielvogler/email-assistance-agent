@@ -8,6 +8,7 @@ from email_assistance_agent.mail.compose import (
     build_new_draft,
     normalise_recipients,
 )
+from tests.fakes import html_part, text_part
 
 ME = "me@example.com"
 
@@ -18,13 +19,13 @@ def test_builds_an_unthreaded_marked_draft() -> None:
     assert (draft["From"], draft["To"], draft["Subject"]) == (ME, "aspast@example.org", "hi")
     assert "In-Reply-To" not in draft and "References" not in draft
     assert draft["X-Drafted-By"] == "email-assistance-agent"
-    assert draft.get_content() == "hello there\n"
+    assert text_part(draft) == "hello there\n"
 
 
 def test_signature_follows_the_body() -> None:
     draft = build_new_draft(["a@example.org"], "hi", "hello", own_address=ME, signature="Me\nACME")
 
-    assert draft.get_content() == "hello\n\n-- \nMe\nACME\n"
+    assert text_part(draft) == "hello\n\n-- \nMe\nACME\n"
 
 
 def test_cc_drops_duplicates_of_to() -> None:
@@ -67,3 +68,11 @@ def test_caps_recipients() -> None:
 def test_subject_must_be_one_short_line(subject: str) -> None:
     with pytest.raises(ComposeError, match="subject"):
         build_new_draft(["a@example.org"], subject, "x", own_address=ME)
+
+
+def test_new_draft_is_text_and_html_alternatives() -> None:
+    draft = build_new_draft(["a@example.org"], "hi", "*soon*", own_address=ME, signature="Me")
+
+    assert draft.get_content_type() == "multipart/alternative"
+    assert text_part(draft) == "*soon*\n\n-- \nMe\n"
+    assert html_part(draft) == "<html><body><p><em>soon</em></p><p>-- </p><p>Me</p></body></html>\n"

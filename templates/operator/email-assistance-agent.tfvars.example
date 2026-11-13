@@ -29,8 +29,9 @@ mailboxes = {
     # the password is added. Never "latest": rotation is a reviewed apply.
     # secret_version = "1"
 
-    # Appended below every draft. \n for new lines.
-    # signature = "Your Name\nYour Company"
+    # Appended below every draft. \n for new lines, **bold** and *italic* for
+    # formatting; an email address or https URL becomes a link.
+    # signature = "**Your Name**\nYour Company\nyou@example.com"
 
     # What the service may read. Empty list = every label. System labels:
     # INBOX, SENT, STARRED, IMPORTANT; anything else is a user label.
